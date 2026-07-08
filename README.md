@@ -17,7 +17,7 @@ Minimal scaffold. Auth features (register, OAuth2, JWT, email verification) are 
 
 ```bash
 cp .env.example .env
-docker compose up -d db
+docker-compose up -d db
 go mod tidy
 go run ./cmd/server
 ```

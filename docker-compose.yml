@@ -2,9 +2,9 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: kde_auth
-      POSTGRES_PASSWORD: kde_auth
-      POSTGRES_DB: kde_auth
+      POSTGRES_USER: ${POSTGRES_USER:-kde_auth}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kde_auth}
+      POSTGRES_DB: ${POSTGRES_DB:-kde_auth}
     ports:
       - "5433:5432"
     volumes:
@@ -15,6 +15,9 @@ services:
     ports:
       - "3001:3001"
     env_file: .env
+    environment:
+      # Overrides DATABASE_URL from .env — inside Docker, Postgres is the "db" service.
+      DATABASE_URL: postgres://${POSTGRES_USER:-kde_auth}:${POSTGRES_PASSWORD:-kde_auth}@db:5432/${POSTGRES_DB:-kde_auth}?sslmode=disable
     depends_on:
       - db
 
