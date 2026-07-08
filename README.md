@@ -2,8 +2,6 @@
 
 Shared authentication service for [kde.fr](https://kde.fr/) projects.
 
-**Production issuer:** `https://auth.kde.fr`
-
 ## Stack
 
 - **Go 1.22**
