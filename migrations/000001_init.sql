@@ -1,0 +1,2 @@
+-- Schema placeholder for kde-auth (to be implemented)
+-- users, oauth_clients, authorization_codes, refresh_tokens, email_verification_tokens
