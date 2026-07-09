@@ -84,9 +84,21 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("DATABASE_URL is required")
 	}
 
+	if cfg.JWTPrivateKeyPEM == "" {
+		cfg.JWTPrivateKeyPEM, err = pemFromEnvOrFile("JWT_PRIVATE_KEY", "JWT_PRIVATE_KEY_FILE")
+		if err != nil {
+			return Config{}, err
+		}
+	}
+	if cfg.JWTPublicKeyPEM == "" {
+		cfg.JWTPublicKeyPEM, err = pemFromEnvOrFile("JWT_PUBLIC_KEY", "JWT_PUBLIC_KEY_FILE")
+		if err != nil {
+			return Config{}, err
+		}
+	}
 	if cfg.JWTPrivateKeyPEM == "" || cfg.JWTPublicKeyPEM == "" {
 		if !isLocalIssuer(cfg.Issuer) {
-			return Config{}, fmt.Errorf("JWT_PRIVATE_KEY and JWT_PUBLIC_KEY are required in production")
+			return Config{}, fmt.Errorf("JWT keys are required in production (JWT_* or JWT_*_FILE)")
 		}
 		priv, pub, err := generateDevRSAKeys()
 		if err != nil {
@@ -108,6 +120,21 @@ func Load() (Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func pemFromEnvOrFile(valueKey, fileKey string) (string, error) {
+	if v := os.Getenv(valueKey); v != "" {
+		return v, nil
+	}
+	path := os.Getenv(fileKey)
+	if path == "" {
+		return "", nil
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("read %s: %w", fileKey, err)
+	}
+	return string(b), nil
 }
 
 func getEnv(key, fallback string) string {

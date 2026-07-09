@@ -20,6 +20,8 @@ services:
     ports:
       - "3001:3001"
     env_file: .env
+    volumes:
+      - ./secrets:/app/secrets:ro
     environment:
       # Overrides DATABASE_URL from .env — inside Docker, Postgres is the "db" service.
       DATABASE_URL: postgres://${POSTGRES_USER:-kde_auth}:${POSTGRES_PASSWORD:-kde_auth}@db:5432/${POSTGRES_DB:-kde_auth}?sslmode=disable
