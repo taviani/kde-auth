@@ -10,5 +10,6 @@ FROM alpine:3.20
 RUN apk add --no-cache ca-certificates
 WORKDIR /app
 COPY --from=build /kde-auth /usr/local/bin/kde-auth
+COPY migrations ./migrations
 EXPOSE 3001
 CMD ["kde-auth"]
