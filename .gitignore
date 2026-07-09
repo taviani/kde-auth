@@ -4,6 +4,7 @@ dist
 .env.*
 !.env.example
 bin/
+secrets/
 *.log
 *.pem
 .DS_Store
