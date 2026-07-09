@@ -108,5 +108,6 @@ jobs:
           rsync -avz --delete \
             --exclude .env \
             --exclude bin \
+            --exclude secrets \
             ./ "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}"
           ssh "${DEPLOY_USER}@${DEPLOY_HOST}" "cd ${DEPLOY_PATH} && docker-compose up -d --build"

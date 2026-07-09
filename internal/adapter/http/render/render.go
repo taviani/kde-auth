@@ -32,7 +32,7 @@ type PageData struct {
 
 func (r *Renderer) HTML(w http.ResponseWriter, name string, data PageData) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := r.templates.ExecuteTemplate(w, "templates/"+name, data); err != nil {
+	if err := r.templates.ExecuteTemplate(w, name, data); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)
 	}
 }
