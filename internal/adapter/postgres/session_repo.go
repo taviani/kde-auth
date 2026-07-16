@@ -22,9 +22,9 @@ func NewSessionRepo(pool *pgxpool.Pool) *SessionRepo {
 
 func (r *SessionRepo) Create(ctx context.Context, session domain.Session, tokenHash string) error {
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO sessions (id, token_hash, user_id, expires_at)
-		VALUES ($1, $2, $3, $4)
-	`, session.ID, tokenHash, session.UserID, session.ExpiresAt)
+		INSERT INTO sessions (token_hash, user_id, expires_at)
+		VALUES ($1, $2, $3)
+	`, tokenHash, session.UserID, session.ExpiresAt)
 	return err
 }
 
