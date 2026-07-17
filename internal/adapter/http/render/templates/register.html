@@ -24,7 +24,7 @@
     <label>Email<input type="email" name="email" value="{{.Email}}" required autocomplete="email"></label>
     <label>Password<input type="password" name="password" required autocomplete="new-password" minlength="12"></label>
     <label>Confirm password<input type="password" name="password_confirm" required autocomplete="new-password" minlength="12"></label>
-    {{if .TurnstileSiteKey}}<div class="cf-turnstile" data-sitekey="{{.TurnstileSiteKey}}" style="margin-top:1rem"></div>{{end}}
+    {{if .TurnstileSiteKey}}<div class="cf-turnstile" data-sitekey="{{.TurnstileSiteKey}}" data-theme="light" style="margin-top:1rem"></div>{{end}}
     <button type="submit">Register</button>
   </form>
   <p class="footer">Already have an account? <a href="/login">Sign in</a></p>

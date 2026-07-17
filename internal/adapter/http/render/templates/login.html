@@ -26,7 +26,7 @@
     <input type="hidden" name="next" value="{{.Next}}">
     <label>Email<input type="email" name="email" value="{{.Email}}" required autocomplete="email"></label>
     <label>Password<input type="password" name="password" required autocomplete="current-password"></label>
-    {{if .TurnstileSiteKey}}<div class="cf-turnstile" data-sitekey="{{.TurnstileSiteKey}}" style="margin-top:1rem"></div>{{end}}
+    {{if .TurnstileSiteKey}}<div class="cf-turnstile" data-sitekey="{{.TurnstileSiteKey}}" data-theme="light" style="margin-top:1rem"></div>{{end}}
     <button type="submit">Sign in</button>
   </form>
   <p class="footer">No account? <a href="/register">Register</a></p>
