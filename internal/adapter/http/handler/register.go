@@ -55,7 +55,7 @@ func (h *Register) post(w http.ResponseWriter, r *http.Request) {
 		Email:        email,
 		Password:     password,
 		CaptchaToken: r.FormValue("cf-turnstile-response"),
-		RemoteIP:     r.RemoteAddr,
+		RemoteIP:     ClientIP(r),
 	})
 	if err != nil {
 		data.Error = response.UserFacingMessage(err)
