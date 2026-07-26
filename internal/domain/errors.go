@@ -13,6 +13,7 @@ var (
 	ErrInvalidScope        = errors.New("invalid scope")
 	ErrUnauthorized        = errors.New("unauthorized")
 	ErrForbidden           = errors.New("forbidden")
+	ErrNoAppAccess         = errors.New("no access to this application")
 	ErrInvalidToken        = errors.New("invalid token")
 	ErrCaptchaFailed       = errors.New("captcha verification failed")
 	ErrValidation          = errors.New("validation failed")

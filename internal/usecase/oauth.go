@@ -73,6 +73,19 @@ func (uc *Authorize) Execute(ctx context.Context, in AuthorizeInput) (AuthorizeR
 		return AuthorizeResult{}, err
 	}
 
+	if client.IsInviteOnly() {
+		if uc.accesses == nil {
+			return AuthorizeResult{}, domain.ErrNoAppAccess
+		}
+		ok, err := uc.accesses.HasAccess(ctx, user.ID, client.ClientID)
+		if err != nil {
+			return AuthorizeResult{}, err
+		}
+		if !ok {
+			return AuthorizeResult{}, domain.ErrNoAppAccess
+		}
+	}
+
 	rawCode, err := crypto.RandomToken(32)
 	if err != nil {
 		return AuthorizeResult{}, err

@@ -9,4 +9,5 @@ import (
 type Mailer interface {
 	SendVerification(ctx context.Context, to domain.Email, verifyURL string) error
 	SendPasswordReset(ctx context.Context, to domain.Email, resetURL string) error
+	SendInvite(ctx context.Context, to domain.Email, appName, acceptURL string) error
 }

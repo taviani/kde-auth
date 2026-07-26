@@ -18,6 +18,7 @@ type Handlers struct {
 	Logout         *handler.Logout
 	ForgotPassword *handler.ForgotPassword
 	ResetPassword  *handler.ResetPassword
+	Invite         *handler.Invite
 	Authorize      *handler.Authorize
 	Token          *handler.Token
 	UserInfo       *handler.UserInfo
@@ -49,6 +50,10 @@ func NewRouter(cfg config.Config, h Handlers) http.Handler {
 	r.Post("/forgot-password", h.ForgotPassword.ServeHTTP)
 	r.Get("/reset-password", h.ResetPassword.ServeHTTP)
 	r.Post("/reset-password", h.ResetPassword.ServeHTTP)
+	if h.Invite != nil {
+		r.Get("/invite", h.Invite.ServeHTTP)
+		r.Post("/invite", h.Invite.ServeHTTP)
+	}
 
 	r.Get("/authorize", h.Authorize.ServeHTTP)
 	r.Post("/token", h.Token.ServeHTTP)
@@ -62,6 +67,10 @@ func NewRouter(cfg config.Config, h Handlers) http.Handler {
 			ar.Post("/users/status", h.Admin.SetStatus)
 			ar.Get("/clients", h.Admin.Clients)
 			ar.Post("/clients", h.Admin.CreateClient)
+			ar.Post("/clients/access-mode", h.Admin.SetAccessMode)
+			ar.Get("/invites", h.Admin.Invites)
+			ar.Post("/invites", h.Admin.CreateInvite)
+			ar.Post("/invites/revoke", h.Admin.RevokeInvite)
 		})
 	}
 

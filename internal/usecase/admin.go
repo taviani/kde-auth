@@ -103,6 +103,10 @@ func (uc *RecordAppAccess) Execute(ctx context.Context, userID domain.UserID, cl
 	})
 }
 
+func (uc *RecordAppAccess) HasAccess(ctx context.Context, userID domain.UserID, clientID domain.ClientID) (bool, error) {
+	return uc.accesses.HasAccess(ctx, userID, clientID)
+}
+
 func hostFromURI(raw string) string {
 	u, err := url.Parse(raw)
 	if err != nil {

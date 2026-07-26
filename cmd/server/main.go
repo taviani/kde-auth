@@ -53,6 +53,7 @@ func main() {
 	userAdminRepo := postgres.NewUserAdminRepo(pool)
 	appAccessRepo := postgres.NewAppAccessRepo(pool)
 	clientRepo := postgres.NewClientRepo(pool)
+	inviteRepo := postgres.NewInviteRepo(pool)
 	sessionRepo := postgres.NewSessionRepo(pool)
 	tokenRepo := postgres.NewTokenRepo(pool)
 	healthChecker := postgres.NewHealth(pool)
@@ -94,6 +95,10 @@ func main() {
 	oidcUC := usecase.NewOIDCMetadata(issuer)
 	adminUC := usecase.NewAdminUsers(userAdminRepo, sysClock)
 	adminClientsUC := usecase.NewAdminClients(clientRepo, hasher)
+	adminInvitesUC := usecase.NewAdminInvites(inviteRepo, clientRepo, mailer, issuer, sysClock)
+	acceptInviteUC := usecase.NewAcceptInvite(
+		inviteRepo, clientRepo, userRepo, appAccessRepo, hasher, tokenRepo, mailer, captcha, resolveSessionUC, issuer, sysClock,
+	)
 	forgotUC := usecase.NewRequestPasswordReset(userRepo, tokenRepo, mailer, captcha, sysClock, issuer)
 	resetUC := usecase.NewResetPassword(userRepo, tokenRepo, sessionRepo, hasher, sysClock)
 
@@ -102,7 +107,7 @@ func main() {
 		log.Fatalf("templates: %v", err)
 	}
 
-	adminHandler := handler.NewAdmin(adminUC, adminClientsUC, renderer)
+	adminHandler := handler.NewAdmin(adminUC, adminClientsUC, adminInvitesUC, renderer)
 	router := httpadapter.NewRouter(cfg, httpadapter.Handlers{
 		Health:         handler.NewHealth(healthUC),
 		Register:       handler.NewRegister(registerUC, renderer, cfg.TurnstileSiteKey),
@@ -111,6 +116,7 @@ func main() {
 		Logout:         handler.NewLogout(logoutUC, cfg.CookieSecure),
 		ForgotPassword: handler.NewForgotPassword(forgotUC, renderer, cfg.TurnstileSiteKey),
 		ResetPassword:  handler.NewResetPassword(resetUC, renderer),
+		Invite:         handler.NewInvite(acceptInviteUC, renderer, cfg.TurnstileSiteKey),
 		Authorize:      handler.NewAuthorize(authorizeUC),
 		Token:          handler.NewToken(tokenUC),
 		UserInfo:       handler.NewUserInfo(userInfoUC, issuer),
