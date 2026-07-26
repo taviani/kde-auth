@@ -22,11 +22,18 @@ type Authorize struct {
 	clients  port.ClientRepository
 	tokens   port.TokenRepository
 	sessions *ResolveSession
+	accesses *RecordAppAccess
 	clock    port.Clock
 }
 
-func NewAuthorize(clients port.ClientRepository, tokens port.TokenRepository, sessions *ResolveSession, clock port.Clock) *Authorize {
-	return &Authorize{clients: clients, tokens: tokens, sessions: sessions, clock: clock}
+func NewAuthorize(
+	clients port.ClientRepository,
+	tokens port.TokenRepository,
+	sessions *ResolveSession,
+	accesses *RecordAppAccess,
+	clock port.Clock,
+) *Authorize {
+	return &Authorize{clients: clients, tokens: tokens, sessions: sessions, accesses: accesses, clock: clock}
 }
 
 type AuthorizeInput struct {
@@ -80,6 +87,9 @@ func (uc *Authorize) Execute(ctx context.Context, in AuthorizeInput) (AuthorizeR
 	}
 	if err := uc.tokens.CreateAuthorizationCode(ctx, code, crypto.HashToken(rawCode)); err != nil {
 		return AuthorizeResult{}, err
+	}
+	if uc.accesses != nil {
+		_ = uc.accesses.Execute(ctx, user.ID, client.ClientID, in.RedirectURI)
 	}
 
 	redirectURL, err := buildRedirect(in.RedirectURI, rawCode, in.State)

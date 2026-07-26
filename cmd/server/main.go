@@ -50,6 +50,8 @@ func main() {
 	}
 
 	userRepo := postgres.NewUserRepo(pool)
+	userAdminRepo := postgres.NewUserAdminRepo(pool)
+	appAccessRepo := postgres.NewAppAccessRepo(pool)
 	clientRepo := postgres.NewClientRepo(pool)
 	sessionRepo := postgres.NewSessionRepo(pool)
 	tokenRepo := postgres.NewTokenRepo(pool)
@@ -85,26 +87,31 @@ func main() {
 	loginUC := usecase.NewLogin(userRepo, sessionRepo, hasher, captcha, sysClock, sessionTTL)
 	logoutUC := usecase.NewLogout(sessionRepo, sysClock)
 	resolveSessionUC := usecase.NewResolveSession(sessionRepo, userRepo, sysClock)
-	authorizeUC := usecase.NewAuthorize(clientRepo, tokenRepo, resolveSessionUC, sysClock)
+	recordAccessUC := usecase.NewRecordAppAccess(appAccessRepo, sysClock)
+	authorizeUC := usecase.NewAuthorize(clientRepo, tokenRepo, resolveSessionUC, recordAccessUC, sysClock)
 	tokenUC := usecase.NewExchangeToken(clientRepo, tokenRepo, userRepo, hasher, issuer, sysClock)
 	userInfoUC := usecase.NewUserInfo(issuer, userRepo)
 	oidcUC := usecase.NewOIDCMetadata(issuer)
+	adminUC := usecase.NewAdminUsers(userAdminRepo, sysClock)
 
 	renderer, err := render.New()
 	if err != nil {
 		log.Fatalf("templates: %v", err)
 	}
 
+	adminHandler := handler.NewAdmin(adminUC, renderer)
 	router := httpadapter.NewRouter(cfg, httpadapter.Handlers{
-		Health:      handler.NewHealth(healthUC),
-		Register:    handler.NewRegister(registerUC, renderer, cfg.TurnstileSiteKey),
-		Login:       handler.NewLogin(loginUC, renderer, cfg.TurnstileSiteKey, cfg.CookieSecure),
-		VerifyEmail: handler.NewVerifyEmail(verifyUC, renderer),
-		Logout:      handler.NewLogout(logoutUC, cfg.CookieSecure),
-		Authorize:   handler.NewAuthorize(authorizeUC),
-		Token:       handler.NewToken(tokenUC),
-		UserInfo:    handler.NewUserInfo(userInfoUC, issuer),
-		OIDC:        handler.NewOIDC(oidcUC, issuer),
+		Health:       handler.NewHealth(healthUC),
+		Register:     handler.NewRegister(registerUC, renderer, cfg.TurnstileSiteKey),
+		Login:        handler.NewLogin(loginUC, renderer, cfg.TurnstileSiteKey, cfg.CookieSecure),
+		VerifyEmail:  handler.NewVerifyEmail(verifyUC, renderer),
+		Logout:       handler.NewLogout(logoutUC, cfg.CookieSecure),
+		Authorize:    handler.NewAuthorize(authorizeUC),
+		Token:        handler.NewToken(tokenUC),
+		UserInfo:     handler.NewUserInfo(userInfoUC, issuer),
+		OIDC:         handler.NewOIDC(oidcUC, issuer),
+		Admin:        adminHandler,
+		RequireAdmin: handler.RequireAdmin(resolveSessionUC),
 	})
 
 	srv := &http.Server{
