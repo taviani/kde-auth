@@ -12,5 +12,6 @@ type UserRepository interface {
 	ByEmail(ctx context.Context, email domain.Email) (domain.User, error)
 	ByID(ctx context.Context, id domain.UserID) (domain.User, error)
 	MarkEmailVerified(ctx context.Context, id domain.UserID, at time.Time) error
+	UpdatePassword(ctx context.Context, id domain.UserID, hash domain.PasswordHash, at time.Time) error
 	ExistsByEmail(ctx context.Context, email domain.Email) (bool, error)
 }

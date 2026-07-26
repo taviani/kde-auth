@@ -22,11 +22,12 @@ func New() (*Renderer, error) {
 }
 
 type PageData struct {
-	Title           string
-	Error           string
-	Success         string
-	Email           string
-	Next            string
+	Title            string
+	Error            string
+	Success          string
+	Email            string
+	Next             string
+	Token            string
 	TurnstileSiteKey string
 }
 

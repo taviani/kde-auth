@@ -19,4 +19,9 @@ func (m *LogMailer) SendVerification(_ context.Context, to domain.Email, verifyU
 	return nil
 }
 
+func (m *LogMailer) SendPasswordReset(_ context.Context, to domain.Email, resetURL string) error {
+	log.Printf("mail: password reset for %s → %s", to, resetURL)
+	return nil
+}
+
 var _ port.Mailer = (*LogMailer)(nil)

@@ -93,25 +93,30 @@ func main() {
 	userInfoUC := usecase.NewUserInfo(issuer, userRepo)
 	oidcUC := usecase.NewOIDCMetadata(issuer)
 	adminUC := usecase.NewAdminUsers(userAdminRepo, sysClock)
+	adminClientsUC := usecase.NewAdminClients(clientRepo, hasher)
+	forgotUC := usecase.NewRequestPasswordReset(userRepo, tokenRepo, mailer, captcha, sysClock, issuer)
+	resetUC := usecase.NewResetPassword(userRepo, tokenRepo, sessionRepo, hasher, sysClock)
 
 	renderer, err := render.New()
 	if err != nil {
 		log.Fatalf("templates: %v", err)
 	}
 
-	adminHandler := handler.NewAdmin(adminUC, renderer)
+	adminHandler := handler.NewAdmin(adminUC, adminClientsUC, renderer)
 	router := httpadapter.NewRouter(cfg, httpadapter.Handlers{
-		Health:       handler.NewHealth(healthUC),
-		Register:     handler.NewRegister(registerUC, renderer, cfg.TurnstileSiteKey),
-		Login:        handler.NewLogin(loginUC, renderer, cfg.TurnstileSiteKey, cfg.CookieSecure),
-		VerifyEmail:  handler.NewVerifyEmail(verifyUC, renderer),
-		Logout:       handler.NewLogout(logoutUC, cfg.CookieSecure),
-		Authorize:    handler.NewAuthorize(authorizeUC),
-		Token:        handler.NewToken(tokenUC),
-		UserInfo:     handler.NewUserInfo(userInfoUC, issuer),
-		OIDC:         handler.NewOIDC(oidcUC, issuer),
-		Admin:        adminHandler,
-		RequireAdmin: handler.RequireAdmin(resolveSessionUC),
+		Health:         handler.NewHealth(healthUC),
+		Register:       handler.NewRegister(registerUC, renderer, cfg.TurnstileSiteKey),
+		Login:          handler.NewLogin(loginUC, renderer, cfg.TurnstileSiteKey, cfg.CookieSecure),
+		VerifyEmail:    handler.NewVerifyEmail(verifyUC, renderer),
+		Logout:         handler.NewLogout(logoutUC, cfg.CookieSecure),
+		ForgotPassword: handler.NewForgotPassword(forgotUC, renderer, cfg.TurnstileSiteKey),
+		ResetPassword:  handler.NewResetPassword(resetUC, renderer),
+		Authorize:      handler.NewAuthorize(authorizeUC),
+		Token:          handler.NewToken(tokenUC),
+		UserInfo:       handler.NewUserInfo(userInfoUC, issuer),
+		OIDC:           handler.NewOIDC(oidcUC, issuer),
+		Admin:          adminHandler,
+		RequireAdmin:   handler.RequireAdmin(resolveSessionUC),
 	})
 
 	srv := &http.Server{

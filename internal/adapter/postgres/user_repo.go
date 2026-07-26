@@ -73,6 +73,19 @@ func (r *UserRepo) MarkEmailVerified(ctx context.Context, id domain.UserID, at t
 	return nil
 }
 
+func (r *UserRepo) UpdatePassword(ctx context.Context, id domain.UserID, hash domain.PasswordHash, at time.Time) error {
+	tag, err := r.pool.Exec(ctx, `
+		UPDATE users SET password_hash = $2, updated_at = $3 WHERE id = $1
+	`, id, hash.String(), at)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
 func (r *UserRepo) ExistsByEmail(ctx context.Context, email domain.Email) (bool, error) {
 	var exists bool
 	err := r.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE lower(email) = lower($1))`, email.String()).Scan(&exists)

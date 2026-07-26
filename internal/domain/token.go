@@ -29,6 +29,12 @@ type EmailVerificationToken struct {
 	ExpiresAt time.Time
 }
 
+type PasswordResetToken struct {
+	Token     string
+	UserID    UserID
+	ExpiresAt time.Time
+}
+
 func ParseScope(scope string) error {
 	if scope == "" {
 		return ValidationError{Field: "scope", Message: "scope is required"}

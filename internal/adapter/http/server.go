@@ -11,17 +11,19 @@ import (
 )
 
 type Handlers struct {
-	Health      *handler.Health
-	Register    *handler.Register
-	Login       *handler.Login
-	VerifyEmail *handler.VerifyEmail
-	Logout      *handler.Logout
-	Authorize   *handler.Authorize
-	Token       *handler.Token
-	UserInfo    *handler.UserInfo
-	OIDC        *handler.OIDC
-	Admin       *handler.Admin
-	RequireAdmin func(http.Handler) http.Handler
+	Health         *handler.Health
+	Register       *handler.Register
+	Login          *handler.Login
+	VerifyEmail    *handler.VerifyEmail
+	Logout         *handler.Logout
+	ForgotPassword *handler.ForgotPassword
+	ResetPassword  *handler.ResetPassword
+	Authorize      *handler.Authorize
+	Token          *handler.Token
+	UserInfo       *handler.UserInfo
+	OIDC           *handler.OIDC
+	Admin          *handler.Admin
+	RequireAdmin   func(http.Handler) http.Handler
 }
 
 func NewRouter(cfg config.Config, h Handlers) http.Handler {
@@ -43,6 +45,10 @@ func NewRouter(cfg config.Config, h Handlers) http.Handler {
 	r.Post("/login", h.Login.ServeHTTP)
 	r.Get("/verify-email", h.VerifyEmail.ServeHTTP)
 	r.Post("/logout", h.Logout.ServeHTTP)
+	r.Get("/forgot-password", h.ForgotPassword.ServeHTTP)
+	r.Post("/forgot-password", h.ForgotPassword.ServeHTTP)
+	r.Get("/reset-password", h.ResetPassword.ServeHTTP)
+	r.Post("/reset-password", h.ResetPassword.ServeHTTP)
 
 	r.Get("/authorize", h.Authorize.ServeHTTP)
 	r.Post("/token", h.Token.ServeHTTP)
@@ -54,6 +60,8 @@ func NewRouter(cfg config.Config, h Handlers) http.Handler {
 			ar.Get("/", h.Admin.Dashboard)
 			ar.Get("/users", h.Admin.Users)
 			ar.Post("/users/status", h.Admin.SetStatus)
+			ar.Get("/clients", h.Admin.Clients)
+			ar.Post("/clients", h.Admin.CreateClient)
 		})
 	}
 

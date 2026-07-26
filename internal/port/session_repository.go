@@ -11,4 +11,5 @@ type SessionRepository interface {
 	Create(ctx context.Context, session domain.Session, tokenHash string) error
 	ByTokenHash(ctx context.Context, tokenHash string, at time.Time) (domain.Session, error)
 	Revoke(ctx context.Context, tokenHash string, at time.Time) error
+	RevokeAllForUser(ctx context.Context, userID domain.UserID, at time.Time) error
 }

@@ -159,4 +159,48 @@ func (r *TokenRepo) ConsumeEmailVerificationToken(ctx context.Context, tokenHash
 	return t, nil
 }
 
+func (r *TokenRepo) CreatePasswordResetToken(ctx context.Context, token domain.PasswordResetToken, tokenHash string) error {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO password_reset_tokens (token_hash, user_id, expires_at)
+		VALUES ($1, $2, $3)
+	`, tokenHash, token.UserID, token.ExpiresAt)
+	return err
+}
+
+func (r *TokenRepo) ConsumePasswordResetToken(ctx context.Context, tokenHash string, at time.Time) (domain.PasswordResetToken, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return domain.PasswordResetToken{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	row := tx.QueryRow(ctx, `
+		SELECT user_id, expires_at, used_at
+		FROM password_reset_tokens
+		WHERE token_hash = $1
+		FOR UPDATE
+	`, tokenHash)
+
+	var t domain.PasswordResetToken
+	var usedAt *time.Time
+	err = row.Scan(&t.UserID, &t.ExpiresAt, &usedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.PasswordResetToken{}, domain.ErrNotFound
+	}
+	if err != nil {
+		return domain.PasswordResetToken{}, err
+	}
+	if usedAt != nil || !at.Before(t.ExpiresAt) {
+		return domain.PasswordResetToken{}, domain.ErrInvalidToken
+	}
+
+	if _, err := tx.Exec(ctx, `UPDATE password_reset_tokens SET used_at = $2 WHERE token_hash = $1`, tokenHash, at); err != nil {
+		return domain.PasswordResetToken{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return domain.PasswordResetToken{}, err
+	}
+	return t, nil
+}
+
 var _ port.TokenRepository = (*TokenRepo)(nil)

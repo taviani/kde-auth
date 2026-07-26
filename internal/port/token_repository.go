@@ -15,4 +15,6 @@ type TokenRepository interface {
 	RevokeRefreshToken(ctx context.Context, tokenHash string, at time.Time) error
 	CreateEmailVerificationToken(ctx context.Context, token domain.EmailVerificationToken, tokenHash string) error
 	ConsumeEmailVerificationToken(ctx context.Context, tokenHash string, at time.Time) (domain.EmailVerificationToken, error)
+	CreatePasswordResetToken(ctx context.Context, token domain.PasswordResetToken, tokenHash string) error
+	ConsumePasswordResetToken(ctx context.Context, tokenHash string, at time.Time) (domain.PasswordResetToken, error)
 }
