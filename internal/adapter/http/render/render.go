@@ -31,6 +31,10 @@ type PageData struct {
 }
 
 func (r *Renderer) HTML(w http.ResponseWriter, name string, data PageData) {
+	r.HTMLData(w, name, data)
+}
+
+func (r *Renderer) HTMLData(w http.ResponseWriter, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := r.templates.ExecuteTemplate(w, name, data); err != nil {
 		http.Error(w, "template error", http.StatusInternalServerError)

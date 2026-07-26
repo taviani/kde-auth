@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · kde-auth</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 1100px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    .sub { color: #555; margin-bottom: 1rem; font-size: 0.9rem; }
+    nav { margin-bottom: 1.5rem; font-size: 0.9rem; }
+    nav a { color: #111; margin-right: 1rem; }
+    form.filters { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; align-items: end; }
+    form.filters label { font-size: 0.8rem; display: flex; flex-direction: column; gap: 0.2rem; }
+    form.filters input, form.filters select { padding: 0.4rem; min-width: 8rem; }
+    form.filters button { padding: 0.45rem 0.8rem; background: #111; color: #fff; border: none; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { text-align: left; padding: 0.45rem 0.4rem; border-bottom: 1px solid #eee; vertical-align: top; }
+    th { color: #555; font-weight: 600; }
+    .badge { display: inline-block; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.75rem; background: #eee; }
+    .badge.active { background: #e6f4ea; color: #1e6b3a; }
+    .badge.pending { background: #fff4e5; color: #8a5a00; }
+    .badge.suspended { background: #fde8e8; color: #9b1c1c; }
+    .apps { color: #555; font-size: 0.8rem; }
+    .actions form { display: inline; }
+    .actions button { font-size: 0.75rem; padding: 0.2rem 0.4rem; margin-right: 0.25rem; cursor: pointer; }
+    .pager { margin-top: 1rem; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="/admin">Dashboard</a>
+    <a href="/admin/users">Users</a>
+  </nav>
+  <h1>Users</h1>
+  <p class="sub">{{.Result.Total}} matching · page {{.Page}}</p>
+
+  <form class="filters" method="get" action="/admin/users">
+    <label>Search email<input type="search" name="q" value="{{.Query}}" placeholder="email"></label>
+    <label>Status
+      <select name="status">
+        <option value="">all</option>
+        <option value="pending" {{if eq .Status "pending"}}selected{{end}}>pending</option>
+        <option value="active" {{if eq .Status "active"}}selected{{end}}>active</option>
+        <option value="suspended" {{if eq .Status "suspended"}}selected{{end}}>suspended</option>
+      </select>
+    </label>
+    <label>Role
+      <select name="role">
+        <option value="">all</option>
+        <option value="user" {{if eq .Role "user"}}selected{{end}}>user</option>
+        <option value="admin" {{if eq .Role "admin"}}selected{{end}}>admin</option>
+      </select>
+    </label>
+    <label>App / client<input type="text" name="client" value="{{.Client}}" placeholder="client_id"></label>
+    <button type="submit">Filter</button>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th>Status</th>
+        <th>Role</th>
+        <th>Verified</th>
+        <th>Apps</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Result.Users}}
+      <tr>
+        <td>{{.User.Email}}</td>
+        <td><span class="badge {{.User.Status}}">{{.User.Status}}</span></td>
+        <td>{{.User.Role}}</td>
+        <td>{{if .User.EmailVerifiedAt}}yes{{else}}no{{end}}</td>
+        <td class="apps">{{range $i, $c := .ClientIDs}}{{if $i}}, {{end}}{{$c}}{{else}}—{{end}}</td>
+        <td>{{.User.CreatedAt.Format "2006-01-02"}}</td>
+        <td class="actions">
+          {{if ne .User.Status "suspended"}}
+          <form method="post" action="/admin/users/status" class="actions">
+            <input type="hidden" name="user_id" value="{{.User.ID}}">
+            <input type="hidden" name="status" value="suspended">
+            <input type="hidden" name="next" value="/admin/users?q={{$.Query}}&status={{$.Status}}&role={{$.Role}}&client={{$.Client}}&page={{$.Page}}">
+            <button type="submit">Suspend</button>
+          </form>
+          {{end}}
+          {{if ne .User.Status "active"}}
+          <form method="post" action="/admin/users/status" class="actions">
+            <input type="hidden" name="user_id" value="{{.User.ID}}">
+            <input type="hidden" name="status" value="active">
+            <input type="hidden" name="next" value="/admin/users?q={{$.Query}}&status={{$.Status}}&role={{$.Role}}&client={{$.Client}}&page={{$.Page}}">
+            <button type="submit">Activate</button>
+          </form>
+          {{end}}
+        </td>
+      </tr>
+      {{else}}
+      <tr><td colspan="7">No users found.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+
+  <div class="pager">
+    {{if gt .Page 1}}<a href="/admin/users?q={{.Query}}&status={{.Status}}&role={{.Role}}&client={{.Client}}&page={{.PrevPage}}">← prev</a>{{end}}
+    {{if eq (len .Result.Users) 50}}
+      {{if gt .Page 1}} · {{end}}
+      <a href="/admin/users?q={{.Query}}&status={{.Status}}&role={{.Role}}&client={{.Client}}&page={{.NextPage}}">next →</a>
+    {{end}}
+  </div>
+</body>
+</html>

@@ -20,6 +20,8 @@ type Handlers struct {
 	Token       *handler.Token
 	UserInfo    *handler.UserInfo
 	OIDC        *handler.OIDC
+	Admin       *handler.Admin
+	RequireAdmin func(http.Handler) http.Handler
 }
 
 func NewRouter(cfg config.Config, h Handlers) http.Handler {
@@ -45,6 +47,15 @@ func NewRouter(cfg config.Config, h Handlers) http.Handler {
 	r.Get("/authorize", h.Authorize.ServeHTTP)
 	r.Post("/token", h.Token.ServeHTTP)
 	r.Get("/userinfo", h.UserInfo.ServeHTTP)
+
+	if h.Admin != nil && h.RequireAdmin != nil {
+		r.Route("/admin", func(ar chi.Router) {
+			ar.Use(h.RequireAdmin)
+			ar.Get("/", h.Admin.Dashboard)
+			ar.Get("/users", h.Admin.Users)
+			ar.Post("/users/status", h.Admin.SetStatus)
+		})
+	}
 
 	_ = cfg
 	return r
