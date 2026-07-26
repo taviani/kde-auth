@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="la">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>in girum imus nocte et consumimur igni</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #c8c2b4;
+      --void: #0c0b0a;
+      --ember: #3a2818;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 40%, var(--ember) 0%, transparent 55%),
+        radial-gradient(ellipse 100% 100% at 50% 100%, #1a120c 0%, var(--void) 70%);
+      color: var(--ink);
+      font-family: "Cormorant Garamond", "Palatino Linotype", Palatino, serif;
+    }
+    main {
+      max-width: 28rem;
+      padding: 2rem 1.5rem;
+      text-align: center;
+    }
+    p {
+      margin: 0;
+      font-size: clamp(1.15rem, 3.2vw, 1.55rem);
+      font-style: italic;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      line-height: 1.55;
+      opacity: 0;
+      animation: rise 2.4s ease forwards, breath 8s ease-in-out 2.4s infinite;
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(0.6rem); }
+      to { opacity: 0.88; transform: translateY(0); }
+    }
+    @keyframes breath {
+      0%, 100% { opacity: 0.72; }
+      50% { opacity: 0.95; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      p { animation: none; opacity: 0.88; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p>in girum imus nocte et consumimur igni</p>
+  </main>
+</body>
+</html>
