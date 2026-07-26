@@ -114,7 +114,7 @@ func main() {
 		Authorize:      handler.NewAuthorize(authorizeUC),
 		Token:          handler.NewToken(tokenUC),
 		UserInfo:       handler.NewUserInfo(userInfoUC, issuer),
-		OIDC:           handler.NewOIDC(oidcUC, issuer),
+		OIDC:           handler.NewOIDC(oidcUC, issuer, renderer),
 		Admin:          adminHandler,
 		RequireAdmin:   handler.RequireAdmin(resolveSessionUC),
 	})
