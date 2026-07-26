@@ -8,3 +8,4 @@ secrets/
 *.log
 *.pem
 .DS_Store
+.cursor/

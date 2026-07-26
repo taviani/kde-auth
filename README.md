@@ -1,6 +1,6 @@
-# kde-auth
+# Auth service
 
-Shared OIDC authentication service for [kde.fr](https://kde.fr/) projects.
+Shared OIDC authentication service for your projects.
 
 ## Stack
 
@@ -57,8 +57,8 @@ http://localhost:3001/authorize?client_id=dept-app&redirect_uri=http://localhost
 
 Set on the server `.env` only (never commit):
 
-- `ISSUER=https://auth.kde.fr`
-- `JWT_PRIVATE_KEY` / `JWT_PUBLIC_KEY` (RSA PEM)
+- `ISSUER=https://auth.example.com` (your public auth URL)
+- `JWT_PRIVATE_KEY` / `JWT_PUBLIC_KEY` (RSA PEM) or `JWT_*_FILE`
 - `OAUTH_CLIENT_SECRET`, `OAUTH_REDIRECT_URI`
 - `COOKIE_SECURE=true`
 - `TURNSTILE_SECRET`, `TURNSTILE_SITE_KEY`

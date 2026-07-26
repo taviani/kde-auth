@@ -65,7 +65,16 @@ func main() {
 		log.Fatalf("seed oauth client: %v", err)
 	}
 
-	mailer := mail.NewLogMailer()
+	mailer, err := mail.NewFromConfig(mail.SMTPConfig{
+		Host:     cfg.SMTPHost,
+		Port:     cfg.SMTPPort,
+		Username: cfg.SMTPUser,
+		Password: cfg.SMTPPassword,
+		From:     cfg.SMTPFrom,
+	})
+	if err != nil {
+		log.Fatalf("mailer: %v", err)
+	}
 	captcha := captchaVerifier(cfg)
 
 	sessionTTL := time.Duration(cfg.SessionTTL) * time.Hour
