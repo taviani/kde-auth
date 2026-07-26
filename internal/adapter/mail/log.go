@@ -24,4 +24,9 @@ func (m *LogMailer) SendPasswordReset(_ context.Context, to domain.Email, resetU
 	return nil
 }
 
+func (m *LogMailer) SendInvite(_ context.Context, to domain.Email, appName, acceptURL string) error {
+	log.Printf("mail: invite for %s app=%s → %s", to, appName, acceptURL)
+	return nil
+}
+
 var _ port.Mailer = (*LogMailer)(nil)

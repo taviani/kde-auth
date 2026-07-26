@@ -16,9 +16,12 @@
     .secret { background: #fff8e6; border: 1px solid #e6c35c; padding: 0.75rem; margin: 1rem 0; word-break: break-all; font-family: ui-monospace, monospace; font-size: 0.85rem; }
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 2rem; }
     th, td { text-align: left; padding: 0.45rem; border-bottom: 1px solid #eee; vertical-align: top; }
+    form.inline { display: inline; }
+    form.inline select, form.inline button { font-size: 0.8rem; }
     form.create label { display: block; margin-top: 0.75rem; font-size: 0.85rem; }
-    form.create input { width: 100%; max-width: 480px; padding: 0.5rem; margin-top: 0.25rem; box-sizing: border-box; }
+    form.create input, form.create select { width: 100%; max-width: 480px; padding: 0.5rem; margin-top: 0.25rem; box-sizing: border-box; }
     form.create button { margin-top: 1rem; padding: 0.55rem 1rem; background: #111; color: #fff; border: none; cursor: pointer; }
+    .muted { color: #888; font-size: 0.8rem; }
   </style>
 </head>
 <body>
@@ -26,6 +29,7 @@
     <a href="/admin">Dashboard</a>
     <a href="/admin/users">Users</a>
     <a href="/admin/clients">Clients</a>
+    <a href="/admin/invites">Invites</a>
   </nav>
   <h1>OAuth clients</h1>
   <p class="sub">Register apps that will use this auth server. Secrets are shown only once at creation.</p>
@@ -33,23 +37,34 @@
   {{if .Error}}<div class="msg error">{{.Error}}</div>{{end}}
   {{if .Success}}
   <div class="msg success">{{.Success}}</div>
+  {{if .NewSecret}}
   <div class="secret">
     <div><strong>client_id:</strong> {{.NewClientID}}</div>
     <div><strong>client_secret:</strong> {{.NewSecret}}</div>
   </div>
   {{end}}
+  {{end}}
 
   <table>
-    <thead><tr><th>Client ID</th><th>Name</th><th>Redirect URIs</th></tr></thead>
+    <thead><tr><th>Client ID</th><th>Name</th><th>Access</th><th>Redirect URIs</th></tr></thead>
     <tbody>
       {{range .Clients}}
       <tr>
         <td><code>{{.ClientID}}</code></td>
         <td>{{.Name}}</td>
+        <td>
+          <form class="inline" method="post" action="/admin/clients/access-mode">
+            <input type="hidden" name="client_id" value="{{.ClientID}}">
+            <select name="access_mode" onchange="this.form.submit()">
+              <option value="public" {{if eq .AccessMode "public"}}selected{{end}}>public</option>
+              <option value="invite_only" {{if eq .AccessMode "invite_only"}}selected{{end}}>invite_only</option>
+            </select>
+          </form>
+        </td>
         <td>{{range $i, $u := .RedirectURIs}}{{if $i}}<br>{{end}}{{$u}}{{end}}</td>
       </tr>
       {{else}}
-      <tr><td colspan="3">No clients yet.</td></tr>
+      <tr><td colspan="4">No clients yet.</td></tr>
       {{end}}
     </tbody>
   </table>
@@ -59,6 +74,12 @@
     <label>Client ID<input name="client_id" required placeholder="my-app" pattern="[a-z0-9_-]+" title="lowercase letters, numbers, _ or -"></label>
     <label>Name<input name="name" required placeholder="My App"></label>
     <label>Redirect URI<input name="redirect_uri" required placeholder="https://app.example.com/auth/callback"></label>
+    <label>Access mode
+      <select name="access_mode">
+        <option value="public">public</option>
+        <option value="invite_only">invite_only</option>
+      </select>
+    </label>
     <button type="submit">Create client</button>
   </form>
 </body>

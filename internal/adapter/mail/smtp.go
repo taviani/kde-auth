@@ -63,6 +63,15 @@ func (m *SMTPMailer) SendPasswordReset(ctx context.Context, to domain.Email, res
 	return m.send(ctx, to, subject, body)
 }
 
+func (m *SMTPMailer) SendInvite(ctx context.Context, to domain.Email, appName, acceptURL string) error {
+	subject := fmt.Sprintf("Invitation to %s", appName)
+	body := fmt.Sprintf(
+		"Hello,\n\nYou have been invited to use %s. Open this link to accept:\n\n%s\n\nIf you did not expect this invitation, you can ignore this message.\n",
+		appName, acceptURL,
+	)
+	return m.send(ctx, to, subject, body)
+}
+
 func (m *SMTPMailer) send(ctx context.Context, to domain.Email, subject, body string) error {
 	if err := ctx.Err(); err != nil {
 		return err

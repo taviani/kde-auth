@@ -33,5 +33,6 @@ func (s *Seed) OAuthClient(ctx context.Context, in OAuthClientSeed) error {
 		ClientSecretHash: secretHash,
 		Name:             in.Name,
 		RedirectURIs:     []string{in.RedirectURI},
+		AccessMode:       domain.AccessModePublic,
 	})
 }

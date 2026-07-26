@@ -25,6 +25,8 @@ func WriteError(w http.ResponseWriter, err error) {
 		WriteJSON(w, http.StatusUnauthorized, oauthError("invalid_request", err.Error()))
 	case errors.Is(err, domain.ErrForbidden):
 		WriteJSON(w, http.StatusForbidden, oauthError("access_denied", err.Error()))
+	case errors.Is(err, domain.ErrNoAppAccess):
+		WriteJSON(w, http.StatusForbidden, oauthError("access_denied", err.Error()))
 	case errors.Is(err, domain.ErrInvalidClient):
 		WriteJSON(w, http.StatusUnauthorized, oauthError("invalid_client", err.Error()))
 	case errors.Is(err, domain.ErrInvalidGrant):
@@ -58,7 +60,9 @@ func UserFacingMessage(err error) string {
 	case errors.Is(err, domain.ErrCaptchaFailed):
 		return "Captcha verification failed. Please try again."
 	case errors.Is(err, domain.ErrInvalidToken):
-		return "This verification link is invalid or has expired."
+		return "This link is invalid or has expired."
+	case errors.Is(err, domain.ErrNoAppAccess):
+		return "You do not have access to this application."
 	case errors.Is(err, domain.ErrForbidden):
 		return "Please verify your email before signing in."
 	default:

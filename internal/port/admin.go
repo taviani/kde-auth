@@ -17,4 +17,13 @@ type UserAdminRepository interface {
 
 type AppAccessRepository interface {
 	Upsert(ctx context.Context, access domain.UserAppAccess) error
+	HasAccess(ctx context.Context, userID domain.UserID, clientID domain.ClientID) (bool, error)
+}
+
+type InviteRepository interface {
+	Create(ctx context.Context, invite domain.Invite, tokenHash string) error
+	ByTokenHash(ctx context.Context, tokenHash string) (domain.Invite, error)
+	ListByClient(ctx context.Context, clientID domain.ClientID) ([]domain.Invite, error)
+	Consume(ctx context.Context, id string, at time.Time) error
+	Revoke(ctx context.Context, id string, at time.Time) error
 }

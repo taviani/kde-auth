@@ -149,6 +149,7 @@ type CreateClientInput struct {
 	ClientID    string
 	Name        string
 	RedirectURI string
+	AccessMode  string
 }
 
 type CreateClientResult struct {
@@ -163,6 +164,10 @@ func (uc *AdminClients) Create(ctx context.Context, actor domain.User, in Create
 	clientID := domain.ClientID(in.ClientID)
 	if clientID == "" || in.Name == "" || in.RedirectURI == "" {
 		return CreateClientResult{}, domain.ValidationError{Field: "client", Message: "client_id, name and redirect_uri are required"}
+	}
+	mode, err := domain.ParseAccessMode(in.AccessMode)
+	if err != nil {
+		return CreateClientResult{}, err
 	}
 	if _, err := uc.clients.ByClientID(ctx, clientID); err == nil {
 		return CreateClientResult{}, domain.ValidationError{Field: "client_id", Message: "client_id already exists"}
@@ -182,9 +187,21 @@ func (uc *AdminClients) Create(ctx context.Context, actor domain.User, in Create
 		ClientSecretHash: hash,
 		Name:             in.Name,
 		RedirectURIs:     []string{in.RedirectURI},
+		AccessMode:       mode,
 	}
 	if err := uc.clients.Upsert(ctx, client); err != nil {
 		return CreateClientResult{}, err
 	}
 	return CreateClientResult{Client: client, ClientSecret: secret}, nil
+}
+
+func (uc *AdminClients) SetAccessMode(ctx context.Context, actor domain.User, clientID string, modeRaw string) error {
+	if !actor.IsAdmin() {
+		return domain.ErrForbidden
+	}
+	mode, err := domain.ParseAccessMode(modeRaw)
+	if err != nil {
+		return err
+	}
+	return uc.clients.UpdateAccessMode(ctx, domain.ClientID(clientID), mode)
 }

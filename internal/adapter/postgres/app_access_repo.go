@@ -31,4 +31,14 @@ func (r *AppAccessRepo) Upsert(ctx context.Context, access domain.UserAppAccess)
 	return err
 }
 
+func (r *AppAccessRepo) HasAccess(ctx context.Context, userID domain.UserID, clientID domain.ClientID) (bool, error) {
+	var exists bool
+	err := r.pool.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM user_app_accesses WHERE user_id = $1 AND client_id = $2
+		)
+	`, userID, clientID).Scan(&exists)
+	return exists, err
+}
+
 var _ port.AppAccessRepository = (*AppAccessRepo)(nil)
