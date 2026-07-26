@@ -33,6 +33,27 @@ func (r *ClientRepo) ByClientID(ctx context.Context, clientID domain.ClientID) (
 	return c, err
 }
 
+func (r *ClientRepo) List(ctx context.Context) ([]domain.OAuthClient, error) {
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, client_id, client_secret_hash, name, redirect_uris
+		FROM oauth_clients
+		ORDER BY created_at ASC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.OAuthClient
+	for rows.Next() {
+		var c domain.OAuthClient
+		if err := rows.Scan(&c.ID, &c.ClientID, &c.ClientSecretHash, &c.Name, &c.RedirectURIs); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
 func (r *ClientRepo) Upsert(ctx context.Context, client domain.OAuthClient) error {
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO oauth_clients (client_id, client_secret_hash, name, redirect_uris)

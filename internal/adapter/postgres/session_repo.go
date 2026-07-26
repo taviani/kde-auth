@@ -50,4 +50,11 @@ func (r *SessionRepo) Revoke(ctx context.Context, tokenHash string, at time.Time
 	return err
 }
 
+func (r *SessionRepo) RevokeAllForUser(ctx context.Context, userID domain.UserID, at time.Time) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE sessions SET revoked_at = $2 WHERE user_id = $1 AND revoked_at IS NULL
+	`, userID, at)
+	return err
+}
+
 var _ port.SessionRepository = (*SessionRepo)(nil)

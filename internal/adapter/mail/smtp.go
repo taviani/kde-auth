@@ -46,15 +46,27 @@ func NewFromConfig(cfg SMTPConfig) (port.Mailer, error) {
 }
 
 func (m *SMTPMailer) SendVerification(ctx context.Context, to domain.Email, verifyURL string) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-
 	subject := "Verify your account"
 	body := fmt.Sprintf(
 		"Hello,\n\nPlease verify your email by opening this link:\n\n%s\n\nIf you did not create an account, you can ignore this message.\n",
 		verifyURL,
 	)
+	return m.send(ctx, to, subject, body)
+}
+
+func (m *SMTPMailer) SendPasswordReset(ctx context.Context, to domain.Email, resetURL string) error {
+	subject := "Reset your password"
+	body := fmt.Sprintf(
+		"Hello,\n\nReset your password by opening this link:\n\n%s\n\nIf you did not request a reset, you can ignore this message. The link expires in one hour.\n",
+		resetURL,
+	)
+	return m.send(ctx, to, subject, body)
+}
+
+func (m *SMTPMailer) send(ctx context.Context, to domain.Email, subject, body string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	msg := buildMessage(m.cfg.From, to.String(), subject, body)
 	addr := net.JoinHostPort(m.cfg.Host, fmt.Sprintf("%d", m.cfg.Port))
 
