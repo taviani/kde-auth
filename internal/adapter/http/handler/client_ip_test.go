@@ -17,21 +17,21 @@ func TestClientIP(t *testing.T) {
 	}{
 		{
 			name:       "x-real-ip preferred",
-			remoteAddr: "172.22.1.1:54321",
-			realIP:     "93.9.233.7",
-			forwarded:  "1.2.3.4, 172.22.1.1",
-			want:       "93.9.233.7",
+			remoteAddr: "10.0.0.1:54321",
+			realIP:     "203.0.113.10",
+			forwarded:  "198.51.100.1, 10.0.0.1",
+			want:       "203.0.113.10",
 		},
 		{
 			name:       "x-forwarded-for first hop",
-			remoteAddr: "172.22.1.1:54321",
-			forwarded:  "93.9.233.7, 172.22.1.1",
-			want:       "93.9.233.7",
+			remoteAddr: "10.0.0.1:54321",
+			forwarded:  "203.0.113.10, 10.0.0.1",
+			want:       "203.0.113.10",
 		},
 		{
 			name:       "remote addr without port",
-			remoteAddr: "172.22.1.1:54321",
-			want:       "172.22.1.1",
+			remoteAddr: "10.0.0.1:54321",
+			want:       "10.0.0.1",
 		},
 	}
 

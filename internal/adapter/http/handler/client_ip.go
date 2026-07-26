@@ -7,8 +7,7 @@ import (
 )
 
 // ClientIP returns the visitor IP behind a trusted reverse proxy.
-// Prefers X-Real-IP (set by mailcow nginx), then the first X-Forwarded-For hop,
-// then RemoteAddr without the port.
+// Prefers X-Real-IP, then the first X-Forwarded-For hop, then RemoteAddr without the port.
 func ClientIP(r *http.Request) string {
 	if ip := strings.TrimSpace(r.Header.Get("X-Real-IP")); ip != "" {
 		return ip
