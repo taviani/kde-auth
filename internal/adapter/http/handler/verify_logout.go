@@ -3,27 +3,32 @@ package handler
 import (
 	"net/http"
 
+	"github.com/taviani/kde-auth/internal/adapter/http/render"
 	"github.com/taviani/kde-auth/internal/adapter/http/response"
 	"github.com/taviani/kde-auth/internal/usecase"
 )
 
 type VerifyEmail struct {
-	uc *usecase.VerifyEmail
+	uc     *usecase.VerifyEmail
+	render *render.Renderer
 }
 
-func NewVerifyEmail(uc *usecase.VerifyEmail) *VerifyEmail {
-	return &VerifyEmail{uc: uc}
+func NewVerifyEmail(uc *usecase.VerifyEmail, render *render.Renderer) *VerifyEmail {
+	return &VerifyEmail{uc: uc, render: render}
 }
 
 func (h *VerifyEmail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	token := r.URL.Query().Get("token")
 	if err := h.uc.Execute(r.Context(), token); err != nil {
-		response.WriteError(w, err)
+		h.render.HTML(w, "verify_result.html", render.PageData{
+			Title: "Verification failed",
+			Error: response.UserFacingMessage(err),
+		})
 		return
 	}
-	response.WriteJSON(w, http.StatusOK, map[string]string{
-		"status":  "verified",
-		"message": "Email verified. You can sign in now.",
+	h.render.HTML(w, "verify_result.html", render.PageData{
+		Title:   "Email verified",
+		Success: "Your email address has been confirmed.",
 	})
 }
 

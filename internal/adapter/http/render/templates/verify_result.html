@@ -8,21 +8,30 @@
     body { font-family: system-ui, sans-serif; max-width: 420px; margin: 4rem auto; padding: 0 1rem; color: #1a1a1a; }
     h1 { font-size: 1.5rem; margin-bottom: 0.75rem; }
     p { line-height: 1.5; color: #333; }
-    .msg { padding: 0.75rem; margin-bottom: 1.25rem; border-radius: 4px; background: #e8f0fe; color: #1a3a6b; }
+    .msg { padding: 0.75rem; margin-bottom: 1.25rem; border-radius: 4px; }
+    .success { background: #e6f4ea; color: #1e6b3a; }
+    .error { background: #fde8e8; color: #9b1c1c; }
     .cta {
       display: block; margin-top: 1.5rem; width: 100%; padding: 0.7rem;
       background: #111; color: #fff; border: none; text-align: center;
-      text-decoration: none; box-sizing: border-box;
+      text-decoration: none; box-sizing: border-box; cursor: pointer;
     }
     .footer { margin-top: 2rem; font-size: 0.85rem; }
     a { color: #111; }
   </style>
 </head>
 <body>
-  <div class="msg">Check your inbox</div>
-  <h1>Verify your email</h1>
-  <p>We sent a verification link to <strong>{{.Email}}</strong>. Open it to activate your account.</p>
+  {{if .Error}}
+  <div class="msg error">{{.Error}}</div>
+  <h1>Verification failed</h1>
+  <p>This link is invalid or has already been used. Request a new account or try signing in if you already verified.</p>
   <a class="cta" href="/login">Go to sign in</a>
-  <p class="footer">Wrong address? <a href="/register">Register again</a></p>
+  <p class="footer"><a href="/register">Create an account</a></p>
+  {{else}}
+  <div class="msg success">{{.Success}}</div>
+  <h1>Email verified</h1>
+  <p>Your account is ready. You can sign in now.</p>
+  <a class="cta" href="/login">Sign in</a>
+  {{end}}
 </body>
 </html>

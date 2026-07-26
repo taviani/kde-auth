@@ -99,7 +99,7 @@ func main() {
 		Health:      handler.NewHealth(healthUC),
 		Register:    handler.NewRegister(registerUC, renderer, cfg.TurnstileSiteKey),
 		Login:       handler.NewLogin(loginUC, renderer, cfg.TurnstileSiteKey, cfg.CookieSecure),
-		VerifyEmail: handler.NewVerifyEmail(verifyUC),
+		VerifyEmail: handler.NewVerifyEmail(verifyUC, renderer),
 		Logout:      handler.NewLogout(logoutUC, cfg.CookieSecure),
 		Authorize:   handler.NewAuthorize(authorizeUC),
 		Token:       handler.NewToken(tokenUC),

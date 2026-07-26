@@ -57,6 +57,8 @@ func UserFacingMessage(err error) string {
 		return "Registration is currently closed."
 	case errors.Is(err, domain.ErrCaptchaFailed):
 		return "Captcha verification failed. Please try again."
+	case errors.Is(err, domain.ErrInvalidToken):
+		return "This verification link is invalid or has expired."
 	case errors.Is(err, domain.ErrForbidden):
 		return "Please verify your email before signing in."
 	default:
