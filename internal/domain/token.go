@@ -8,12 +8,14 @@ const (
 )
 
 type AuthorizationCode struct {
-	Code        string
-	UserID      UserID
-	ClientID    ClientID
-	RedirectURI string
-	Scope       string
-	ExpiresAt   time.Time
+	Code                string
+	UserID              UserID
+	ClientID            ClientID
+	RedirectURI         string
+	Scope               string
+	CodeChallenge       string
+	CodeChallengeMethod string
+	ExpiresAt           time.Time
 }
 
 type RefreshToken struct {

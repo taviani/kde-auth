@@ -29,10 +29,11 @@ func (s *Seed) OAuthClient(ctx context.Context, in OAuthClientSeed) error {
 		return err
 	}
 	return s.clients.Upsert(ctx, domain.OAuthClient{
-		ClientID:         domain.ClientID(in.ClientID),
-		ClientSecretHash: secretHash,
-		Name:             in.Name,
-		RedirectURIs:     []string{in.RedirectURI},
-		AccessMode:       domain.AccessModePublic,
+		ClientID:                domain.ClientID(in.ClientID),
+		ClientSecretHash:        secretHash,
+		Name:                    in.Name,
+		RedirectURIs:            []string{in.RedirectURI},
+		AccessMode:              domain.AccessModePublic,
+		TokenEndpointAuthMethod: domain.TokenAuthClientSecretPost,
 	})
 }

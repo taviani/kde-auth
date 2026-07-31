@@ -34,6 +34,7 @@ func (h *Token) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		RedirectURI:  r.FormValue("redirect_uri"),
 		ClientID:     r.FormValue("client_id"),
 		ClientSecret: r.FormValue("client_secret"),
+		CodeVerifier: r.FormValue("code_verifier"),
 		RefreshToken: r.FormValue("refresh_token"),
 	})
 	if err != nil {

@@ -11,6 +11,13 @@ const (
 	AccessModeInviteOnly AccessMode = "invite_only"
 )
 
+type TokenEndpointAuthMethod string
+
+const (
+	TokenAuthClientSecretPost TokenEndpointAuthMethod = "client_secret_post"
+	TokenAuthNone             TokenEndpointAuthMethod = "none"
+)
+
 func ParseAccessMode(raw string) (AccessMode, error) {
 	switch AccessMode(raw) {
 	case AccessModePublic, AccessModeInviteOnly:
@@ -22,13 +29,25 @@ func ParseAccessMode(raw string) (AccessMode, error) {
 	}
 }
 
+func ParseTokenEndpointAuthMethod(raw string) (TokenEndpointAuthMethod, error) {
+	switch TokenEndpointAuthMethod(raw) {
+	case TokenAuthClientSecretPost, TokenAuthNone:
+		return TokenEndpointAuthMethod(raw), nil
+	case "":
+		return TokenAuthClientSecretPost, nil
+	default:
+		return "", ValidationError{Field: "token_endpoint_auth_method", Message: "must be client_secret_post or none"}
+	}
+}
+
 type OAuthClient struct {
-	ID               string
-	ClientID         ClientID
-	ClientSecretHash PasswordHash
-	Name             string
-	RedirectURIs     []string
-	AccessMode       AccessMode
+	ID                       string
+	ClientID                 ClientID
+	ClientSecretHash         PasswordHash
+	Name                     string
+	RedirectURIs             []string
+	AccessMode               AccessMode
+	TokenEndpointAuthMethod  TokenEndpointAuthMethod
 }
 
 func (c OAuthClient) AllowsRedirectURI(uri string) bool {
@@ -42,6 +61,10 @@ func (c OAuthClient) AllowsRedirectURI(uri string) bool {
 
 func (c OAuthClient) IsInviteOnly() bool {
 	return c.AccessMode == AccessModeInviteOnly
+}
+
+func (c OAuthClient) IsPublic() bool {
+	return c.TokenEndpointAuthMethod == TokenAuthNone
 }
 
 type Invite struct {

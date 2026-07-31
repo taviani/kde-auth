@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	authCodeTTL    = 5 * time.Minute
-	accessTokenTTL = 15 * time.Minute
+	authCodeTTL     = 5 * time.Minute
+	accessTokenTTL  = 15 * time.Minute
 	refreshTokenTTL = 30 * 24 * time.Hour
 )
 
@@ -43,6 +43,8 @@ type AuthorizeInput struct {
 	Scope               string
 	State               string
 	SessionToken        string
+	CodeChallenge       string
+	CodeChallengeMethod string
 }
 
 type AuthorizeResult struct {
@@ -66,6 +68,24 @@ func (uc *Authorize) Execute(ctx context.Context, in AuthorizeInput) (AuthorizeR
 	}
 	if !client.AllowsRedirectURI(in.RedirectURI) {
 		return AuthorizeResult{}, domain.ErrInvalidRedirectURI
+	}
+
+	challenge := in.CodeChallenge
+	method, err := domain.ParseCodeChallengeMethod(in.CodeChallengeMethod)
+	if err != nil {
+		return AuthorizeResult{}, err
+	}
+	if client.IsPublic() {
+		if challenge == "" {
+			return AuthorizeResult{}, domain.ValidationError{Field: "code_challenge", Message: "code_challenge is required for public clients"}
+		}
+	}
+	if challenge != "" {
+		if len(challenge) < 43 || len(challenge) > 128 {
+			return AuthorizeResult{}, domain.ValidationError{Field: "code_challenge", Message: "invalid code_challenge"}
+		}
+	} else {
+		method = ""
 	}
 
 	user, err := uc.sessions.Execute(ctx, in.SessionToken)
@@ -92,11 +112,13 @@ func (uc *Authorize) Execute(ctx context.Context, in AuthorizeInput) (AuthorizeR
 	}
 	now := uc.clock.Now()
 	code := domain.AuthorizationCode{
-		UserID:      user.ID,
-		ClientID:    client.ClientID,
-		RedirectURI: in.RedirectURI,
-		Scope:       in.Scope,
-		ExpiresAt:   now.Add(authCodeTTL),
+		UserID:              user.ID,
+		ClientID:            client.ClientID,
+		RedirectURI:         in.RedirectURI,
+		Scope:               in.Scope,
+		CodeChallenge:       challenge,
+		CodeChallengeMethod: method,
+		ExpiresAt:           now.Add(authCodeTTL),
 	}
 	if err := uc.tokens.CreateAuthorizationCode(ctx, code, crypto.HashToken(rawCode)); err != nil {
 		return AuthorizeResult{}, err
@@ -157,6 +179,7 @@ type TokenInput struct {
 	RedirectURI  string
 	ClientID     string
 	ClientSecret string
+	CodeVerifier string
 	RefreshToken string
 }
 
@@ -194,6 +217,17 @@ func (uc *ExchangeToken) exchangeCode(ctx context.Context, in TokenInput) (Token
 		return TokenResult{}, err
 	}
 	if code.ClientID != client.ClientID || code.RedirectURI != in.RedirectURI {
+		return TokenResult{}, domain.ErrInvalidGrant
+	}
+
+	if code.CodeChallenge != "" {
+		if code.CodeChallengeMethod != domain.CodeChallengeMethodS256 {
+			return TokenResult{}, domain.ErrInvalidGrant
+		}
+		if err := domain.VerifyPKCES256(code.CodeChallenge, in.CodeVerifier); err != nil {
+			return TokenResult{}, err
+		}
+	} else if client.IsPublic() {
 		return TokenResult{}, domain.ErrInvalidGrant
 	}
 
@@ -242,7 +276,14 @@ func (uc *ExchangeToken) authenticateClient(ctx context.Context, clientID, secre
 	if err != nil {
 		return domain.OAuthClient{}, domain.ErrInvalidClient
 	}
-	if !uc.hasher.Verify(client.ClientSecretHash, domain.PlainPassword(secret)) {
+	if client.IsPublic() {
+		// Public clients must not present a client_secret.
+		if secret != "" {
+			return domain.OAuthClient{}, domain.ErrInvalidClient
+		}
+		return client, nil
+	}
+	if secret == "" || !uc.hasher.Verify(client.ClientSecretHash, domain.PlainPassword(secret)) {
 		return domain.OAuthClient{}, domain.ErrInvalidClient
 	}
 	return client, nil
@@ -328,6 +369,10 @@ func (uc *OIDCMetadata) Execute() map[string]any {
 		"subject_types_supported":               []string{"public"},
 		"id_token_signing_alg_values_supported": []string{"RS256"},
 		"scopes_supported":                      []string{domain.ScopeOpenID, domain.ScopeEmail},
-		"token_endpoint_auth_methods_supported": []string{"client_secret_post"},
+		"token_endpoint_auth_methods_supported": []string{
+			string(domain.TokenAuthClientSecretPost),
+			string(domain.TokenAuthNone),
+		},
+		"code_challenge_methods_supported": []string{domain.CodeChallengeMethodS256},
 	}
 }

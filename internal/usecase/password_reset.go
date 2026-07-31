@@ -146,10 +146,11 @@ func (uc *AdminClients) List(ctx context.Context) ([]domain.OAuthClient, error) 
 }
 
 type CreateClientInput struct {
-	ClientID    string
-	Name        string
-	RedirectURI string
-	AccessMode  string
+	ClientID                string
+	Name                    string
+	RedirectURI             string
+	AccessMode              string
+	TokenEndpointAuthMethod string
 }
 
 type CreateClientResult struct {
@@ -169,30 +170,44 @@ func (uc *AdminClients) Create(ctx context.Context, actor domain.User, in Create
 	if err != nil {
 		return CreateClientResult{}, err
 	}
+	authMethod, err := domain.ParseTokenEndpointAuthMethod(in.TokenEndpointAuthMethod)
+	if err != nil {
+		return CreateClientResult{}, err
+	}
 	if _, err := uc.clients.ByClientID(ctx, clientID); err == nil {
 		return CreateClientResult{}, domain.ValidationError{Field: "client_id", Message: "client_id already exists"}
 	} else if !errors.Is(err, domain.ErrNotFound) {
 		return CreateClientResult{}, err
 	}
-	secret, err := crypto.RandomToken(24)
-	if err != nil {
-		return CreateClientResult{}, err
-	}
-	hash, err := uc.hasher.Hash(ctx, domain.PlainPassword(secret))
-	if err != nil {
-		return CreateClientResult{}, err
-	}
+
 	client := domain.OAuthClient{
-		ClientID:         clientID,
-		ClientSecretHash: hash,
-		Name:             in.Name,
-		RedirectURIs:     []string{in.RedirectURI},
-		AccessMode:       mode,
+		ClientID:                clientID,
+		Name:                    in.Name,
+		RedirectURIs:            []string{in.RedirectURI},
+		AccessMode:              mode,
+		TokenEndpointAuthMethod: authMethod,
 	}
+
+	var rawSecret string
+	if authMethod == domain.TokenAuthNone {
+		client.ClientSecretHash = ""
+	} else {
+		secret, err := crypto.RandomToken(24)
+		if err != nil {
+			return CreateClientResult{}, err
+		}
+		hash, err := uc.hasher.Hash(ctx, domain.PlainPassword(secret))
+		if err != nil {
+			return CreateClientResult{}, err
+		}
+		client.ClientSecretHash = hash
+		rawSecret = secret
+	}
+
 	if err := uc.clients.Upsert(ctx, client); err != nil {
 		return CreateClientResult{}, err
 	}
-	return CreateClientResult{Client: client, ClientSecret: secret}, nil
+	return CreateClientResult{Client: client, ClientSecret: rawSecret}, nil
 }
 
 func (uc *AdminClients) SetAccessMode(ctx context.Context, actor domain.User, clientID string, modeRaw string) error {
