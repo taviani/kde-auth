@@ -147,10 +147,11 @@ func (h *Admin) CreateClient(w http.ResponseWriter, r *http.Request) {
 		Clients: clients,
 	}
 	result, err := h.clients.Create(r.Context(), actor, usecase.CreateClientInput{
-		ClientID:    strings.TrimSpace(r.FormValue("client_id")),
-		Name:        strings.TrimSpace(r.FormValue("name")),
-		RedirectURI: strings.TrimSpace(r.FormValue("redirect_uri")),
-		AccessMode:  strings.TrimSpace(r.FormValue("access_mode")),
+		ClientID:                strings.TrimSpace(r.FormValue("client_id")),
+		Name:                    strings.TrimSpace(r.FormValue("name")),
+		RedirectURI:             strings.TrimSpace(r.FormValue("redirect_uri")),
+		AccessMode:              strings.TrimSpace(r.FormValue("access_mode")),
+		TokenEndpointAuthMethod: strings.TrimSpace(r.FormValue("token_endpoint_auth_method")),
 	})
 	if err != nil {
 		data.Error = response.UserFacingMessage(err)
@@ -158,13 +159,19 @@ func (h *Admin) CreateClient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	clients, _ = h.clients.List(r.Context())
+	success := "Client created."
+	if result.ClientSecret != "" {
+		success = "Client created. Copy the secret now — it will not be shown again."
+	} else {
+		success = "Public client created (PKCE required; no client_secret)."
+	}
 	h.render.HTMLData(w, "admin_clients.html", adminPageData{
 		Title:       "OAuth clients",
 		Actor:       actor,
 		Clients:     clients,
 		NewClientID: string(result.Client.ClientID),
 		NewSecret:   result.ClientSecret,
-		Success:     "Client created. Copy the secret now — it will not be shown again.",
+		Success:     success,
 	})
 }
 

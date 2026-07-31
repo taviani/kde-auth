@@ -21,12 +21,14 @@ func NewAuthorize(uc *usecase.Authorize) *Authorize {
 func (h *Authorize) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	in := usecase.AuthorizeInput{
-		ClientID:     q.Get("client_id"),
-		RedirectURI:  q.Get("redirect_uri"),
-		ResponseType: q.Get("response_type"),
-		Scope:        q.Get("scope"),
-		State:        q.Get("state"),
-		SessionToken: response.SessionToken(r),
+		ClientID:            q.Get("client_id"),
+		RedirectURI:         q.Get("redirect_uri"),
+		ResponseType:        q.Get("response_type"),
+		Scope:               q.Get("scope"),
+		State:               q.Get("state"),
+		SessionToken:        response.SessionToken(r),
+		CodeChallenge:       q.Get("code_challenge"),
+		CodeChallengeMethod: q.Get("code_challenge_method"),
 	}
 
 	result, err := h.uc.Execute(r.Context(), in)

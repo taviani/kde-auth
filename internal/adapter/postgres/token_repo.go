@@ -22,9 +22,13 @@ func NewTokenRepo(pool *pgxpool.Pool) *TokenRepo {
 
 func (r *TokenRepo) CreateAuthorizationCode(ctx context.Context, code domain.AuthorizationCode, codeHash string) error {
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO authorization_codes (code_hash, user_id, client_id, redirect_uri, scope, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`, codeHash, code.UserID, code.ClientID, code.RedirectURI, code.Scope, code.ExpiresAt)
+		INSERT INTO authorization_codes (
+			code_hash, user_id, client_id, redirect_uri, scope,
+			code_challenge, code_challenge_method, expires_at
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, codeHash, code.UserID, code.ClientID, code.RedirectURI, code.Scope,
+		nullIfEmpty(code.CodeChallenge), nullIfEmpty(code.CodeChallengeMethod), code.ExpiresAt)
 	return err
 }
 
@@ -36,7 +40,9 @@ func (r *TokenRepo) ConsumeAuthorizationCode(ctx context.Context, codeHash strin
 	defer tx.Rollback(ctx)
 
 	row := tx.QueryRow(ctx, `
-		SELECT user_id, client_id, redirect_uri, scope, expires_at, used_at
+		SELECT user_id, client_id, redirect_uri, scope,
+		       COALESCE(code_challenge, ''), COALESCE(code_challenge_method, ''),
+		       expires_at, used_at
 		FROM authorization_codes
 		WHERE code_hash = $1
 		FOR UPDATE
@@ -44,7 +50,11 @@ func (r *TokenRepo) ConsumeAuthorizationCode(ctx context.Context, codeHash strin
 
 	var c domain.AuthorizationCode
 	var usedAt *time.Time
-	err = row.Scan(&c.UserID, &c.ClientID, &c.RedirectURI, &c.Scope, &c.ExpiresAt, &usedAt)
+	err = row.Scan(
+		&c.UserID, &c.ClientID, &c.RedirectURI, &c.Scope,
+		&c.CodeChallenge, &c.CodeChallengeMethod,
+		&c.ExpiresAt, &usedAt,
+	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.AuthorizationCode{}, domain.ErrNotFound
 	}
@@ -62,6 +72,13 @@ func (r *TokenRepo) ConsumeAuthorizationCode(ctx context.Context, codeHash strin
 		return domain.AuthorizationCode{}, err
 	}
 	return c, nil
+}
+
+func nullIfEmpty(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
 }
 
 func (r *TokenRepo) CreateRefreshToken(ctx context.Context, token domain.RefreshToken, tokenHash string) error {

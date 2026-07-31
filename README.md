@@ -30,8 +30,11 @@ internal/adapter/     http, postgres, crypto, mail
 | GET | `/verify-email?token=` | Confirm email |
 | GET/POST | `/login` | Sign in (session cookie) |
 | POST | `/logout` | End session |
-| GET | `/authorize` | OAuth2 authorization code |
+| GET | `/authorize` | OAuth2 authorization code (supports PKCE `S256`) |
 | POST | `/token` | Exchange code / refresh token |
+
+Public (mobile) clients use `token_endpoint_auth_method=none` and **must** send PKCE (`code_challenge` / `code_verifier`). Confidential clients keep `client_secret_post` (PKCE optional).
+
 | GET | `/userinfo` | Profile from Bearer JWT |
 
 ## Development
