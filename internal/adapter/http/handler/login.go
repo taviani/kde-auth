@@ -5,6 +5,7 @@ import (
 
 	"github.com/taviani/kde-auth/internal/adapter/http/response"
 	"github.com/taviani/kde-auth/internal/adapter/http/render"
+	"github.com/taviani/kde-auth/internal/domain"
 	"github.com/taviani/kde-auth/internal/usecase"
 )
 
@@ -22,11 +23,15 @@ func NewLogin(uc *usecase.Login, render *render.Renderer, turnstileKey string, c
 func (h *Login) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		h.render.HTML(w, "login.html", render.PageData{
+		data := render.PageData{
 			Title:            "Sign in",
 			Next:             r.URL.Query().Get("next"),
 			TurnstileSiteKey: h.turnstileKey,
-		})
+		}
+		if r.URL.Query().Get("denied") == "1" {
+			data.Error = response.UserFacingMessage(domain.ErrNoAppAccess) + " Sign in with an invited account."
+		}
+		h.render.HTML(w, "login.html", data)
 	case http.MethodPost:
 		h.post(w, r)
 	default:

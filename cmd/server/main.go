@@ -117,7 +117,7 @@ func main() {
 		ForgotPassword: handler.NewForgotPassword(forgotUC, renderer, cfg.TurnstileSiteKey),
 		ResetPassword:  handler.NewResetPassword(resetUC, renderer),
 		Invite:         handler.NewInvite(acceptInviteUC, renderer, cfg.TurnstileSiteKey),
-		Authorize:      handler.NewAuthorize(authorizeUC),
+		Authorize:      handler.NewAuthorize(authorizeUC, logoutUC, cfg.CookieSecure),
 		Token:          handler.NewToken(tokenUC),
 		UserInfo:       handler.NewUserInfo(userInfoUC, issuer),
 		OIDC:           handler.NewOIDC(oidcUC, issuer, renderer),
