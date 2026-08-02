@@ -18,6 +18,7 @@ type Handlers struct {
 	Logout         *handler.Logout
 	ForgotPassword *handler.ForgotPassword
 	ResetPassword  *handler.ResetPassword
+	ChangePassword *handler.ChangePassword
 	Invite         *handler.Invite
 	Authorize      *handler.Authorize
 	Token          *handler.Token
@@ -50,6 +51,9 @@ func NewRouter(cfg config.Config, h Handlers) http.Handler {
 	r.Post("/forgot-password", h.ForgotPassword.ServeHTTP)
 	r.Get("/reset-password", h.ResetPassword.ServeHTTP)
 	r.Post("/reset-password", h.ResetPassword.ServeHTTP)
+	if h.ChangePassword != nil {
+		r.Post("/account/password", h.ChangePassword.ServeHTTP)
+	}
 	if h.Invite != nil {
 		r.Get("/invite", h.Invite.ServeHTTP)
 		r.Post("/invite", h.Invite.ServeHTTP)

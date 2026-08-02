@@ -36,6 +36,7 @@ internal/adapter/     http, postgres, crypto, mail
 Public (mobile) clients use `token_endpoint_auth_method=none` and **must** send PKCE (`code_challenge` / `code_verifier`). Confidential clients keep `client_secret_post` (PKCE optional).
 
 | GET | `/userinfo` | Profile from Bearer JWT |
+| POST | `/account/password` | Change password (Bearer JWT; body: `current_password`, `new_password`, `new_password_confirm`) |
 
 ## Development
 
