@@ -101,6 +101,7 @@ func main() {
 	)
 	forgotUC := usecase.NewRequestPasswordReset(userRepo, tokenRepo, mailer, captcha, sysClock, issuer)
 	resetUC := usecase.NewResetPassword(userRepo, tokenRepo, sessionRepo, hasher, sysClock)
+	changePasswordUC := usecase.NewChangePassword(userRepo, sessionRepo, hasher, sysClock)
 
 	renderer, err := render.New()
 	if err != nil {
@@ -116,6 +117,7 @@ func main() {
 		Logout:         handler.NewLogout(logoutUC, cfg.CookieSecure),
 		ForgotPassword: handler.NewForgotPassword(forgotUC, renderer, cfg.TurnstileSiteKey),
 		ResetPassword:  handler.NewResetPassword(resetUC, renderer),
+		ChangePassword: handler.NewChangePassword(changePasswordUC, issuer),
 		Invite:         handler.NewInvite(acceptInviteUC, renderer, cfg.TurnstileSiteKey),
 		Authorize:      handler.NewAuthorize(authorizeUC, logoutUC, cfg.CookieSecure),
 		Token:          handler.NewToken(tokenUC),
