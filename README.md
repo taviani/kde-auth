@@ -35,6 +35,8 @@ internal/adapter/     http, postgres, crypto, mail
 
 Public (mobile) clients use `token_endpoint_auth_method=none` and **must** send PKCE (`code_challenge` / `code_verifier`). Confidential clients keep `client_secret_post` (PKCE optional).
 
+Supported scopes: `openid` (required), `email`, `offline_access` (native apps that store a refresh token).
+
 | GET | `/userinfo` | Profile from Bearer JWT |
 | POST | `/account/password` | Change password (Bearer JWT; body: `current_password`, `new_password`, `new_password_confirm`) |
 
@@ -54,7 +56,7 @@ On localhost, JWT keys and OAuth client defaults are generated/seeded automatica
 # 1. Register at http://localhost:3001/register
 # 2. Copy verify URL from server logs, open in browser
 # 3. Sign in, then open:
-http://localhost:3001/authorize?client_id=dept-app&redirect_uri=http://localhost:4322/auth/callback&response_type=code&scope=openid%20email&state=dev
+http://localhost:3001/authorize?client_id=dept-app&redirect_uri=http://localhost:4322/auth/callback&response_type=code&scope=openid%20email%20offline_access&state=dev
 ```
 
 ## Production

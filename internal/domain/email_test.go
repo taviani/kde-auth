@@ -21,7 +21,13 @@ func TestParseScope(t *testing.T) {
 	if err := domain.ParseScope("openid email"); err != nil {
 		t.Fatal(err)
 	}
+	if err := domain.ParseScope("openid email offline_access"); err != nil {
+		t.Fatal(err)
+	}
 	if err := domain.ParseScope("email"); !errors.Is(err, domain.ErrInvalidScope) {
+		t.Fatalf("expected invalid scope, got %v", err)
+	}
+	if err := domain.ParseScope("openid unknown"); !errors.Is(err, domain.ErrInvalidScope) {
 		t.Fatalf("expected invalid scope, got %v", err)
 	}
 }
