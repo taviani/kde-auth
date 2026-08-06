@@ -3,8 +3,9 @@ package domain
 import "time"
 
 const (
-	ScopeOpenID = "openid"
-	ScopeEmail  = "email"
+	ScopeOpenID        = "openid"
+	ScopeEmail         = "email"
+	ScopeOfflineAccess = "offline_access"
 )
 
 type AuthorizationCode struct {
@@ -46,7 +47,7 @@ func ParseScope(scope string) error {
 		switch part {
 		case ScopeOpenID:
 			hasOpenID = true
-		case ScopeEmail:
+		case ScopeEmail, ScopeOfflineAccess:
 		default:
 			return ErrInvalidScope
 		}
