@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
   <title>{{.Title}} · kde-auth</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 420px; margin: 4rem auto; padding: 0 1rem; color: #1a1a1a; }
@@ -29,6 +30,6 @@
     {{if .TurnstileSiteKey}}<div class="cf-turnstile" data-sitekey="{{.TurnstileSiteKey}}" data-theme="light" style="margin-top:1rem"></div>{{end}}
     <button type="submit">Sign in</button>
   </form>
-  <p class="footer">No account? <a href="/register">Register</a> · <a href="/forgot-password">Forgot password?</a></p>
+  <p class="footer"><a href="/forgot-password">Forgot password?</a></p>
 </body>
 </html>

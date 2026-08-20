@@ -19,7 +19,7 @@ func NewAdminUsers(users port.UserAdminRepository, clock port.Clock) *AdminUsers
 }
 
 type AdminUserRow struct {
-	User     domain.User
+	User      domain.User
 	ClientIDs []domain.ClientID
 }
 
@@ -78,6 +78,26 @@ func (uc *AdminUsers) SetStatus(ctx context.Context, actor domain.User, id domai
 		return domain.ValidationError{Field: "status", Message: "cannot suspend your own account"}
 	}
 	return uc.users.SetStatus(ctx, id, status, uc.clock.Now())
+}
+
+func (uc *AdminUsers) Delete(ctx context.Context, actor domain.User, id domain.UserID) error {
+	if !actor.IsAdmin() {
+		return domain.ErrForbidden
+	}
+	if actor.ID == id {
+		return domain.ValidationError{Field: "user_id", Message: "cannot delete your own account"}
+	}
+	if id == "" {
+		return domain.ValidationError{Field: "user_id", Message: "required"}
+	}
+	target, err := uc.users.ByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if target.IsAdmin() {
+		return domain.ValidationError{Field: "user_id", Message: "cannot delete an admin account"}
+	}
+	return uc.users.Delete(ctx, id)
 }
 
 type RecordAppAccess struct {

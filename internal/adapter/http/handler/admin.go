@@ -116,6 +116,28 @@ func (h *Admin) SetStatus(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, next, http.StatusSeeOther)
 }
 
+func (h *Admin) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	actor, ok := AdminUser(r.Context())
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	id := domain.UserID(r.FormValue("user_id"))
+	if err := h.users.Delete(r.Context(), actor, id); err != nil {
+		http.Error(w, response.UserFacingMessage(err), http.StatusBadRequest)
+		return
+	}
+	next := r.FormValue("next")
+	if next == "" {
+		next = "/admin/users"
+	}
+	http.Redirect(w, r, next, http.StatusSeeOther)
+}
+
 func (h *Admin) Clients(w http.ResponseWriter, r *http.Request) {
 	actor, _ := AdminUser(r.Context())
 	clients, err := h.clients.List(r.Context())

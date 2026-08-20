@@ -1,23 +1,27 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
+	"strings"
 
-	"github.com/taviani/kde-auth/internal/adapter/http/response"
 	"github.com/taviani/kde-auth/internal/adapter/http/render"
+	"github.com/taviani/kde-auth/internal/adapter/http/response"
 	"github.com/taviani/kde-auth/internal/domain"
+	"github.com/taviani/kde-auth/internal/platform/ratelimit"
 	"github.com/taviani/kde-auth/internal/usecase"
 )
 
 type Login struct {
 	uc           *usecase.Login
+	limiter      *ratelimit.Limiter
 	render       *render.Renderer
 	turnstileKey string
 	cookieSecure bool
 }
 
-func NewLogin(uc *usecase.Login, render *render.Renderer, turnstileKey string, cookieSecure bool) *Login {
-	return &Login{uc: uc, render: render, turnstileKey: turnstileKey, cookieSecure: cookieSecure}
+func NewLogin(uc *usecase.Login, limiter *ratelimit.Limiter, render *render.Renderer, turnstileKey string, cookieSecure bool) *Login {
+	return &Login{uc: uc, limiter: limiter, render: render, turnstileKey: turnstileKey, cookieSecure: cookieSecure}
 }
 
 func (h *Login) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +57,15 @@ func (h *Login) post(w http.ResponseWriter, r *http.Request) {
 		TurnstileSiteKey: h.turnstileKey,
 	}
 
+	ipKey := "ip:" + ClientIP(r)
+	emailKey := "email:" + strings.ToLower(strings.TrimSpace(email))
+	if h.limiter != nil && h.limiter.TooMany(ipKey, emailKey) {
+		data.Error = response.UserFacingMessage(domain.ErrTooManyAttempts)
+		w.WriteHeader(http.StatusTooManyRequests)
+		h.render.HTML(w, "login.html", data)
+		return
+	}
+
 	result, err := h.uc.Execute(r.Context(), usecase.LoginInput{
 		Email:        email,
 		Password:     r.FormValue("password"),
@@ -60,14 +73,24 @@ func (h *Login) post(w http.ResponseWriter, r *http.Request) {
 		RemoteIP:     ClientIP(r),
 	})
 	if err != nil {
+		if h.limiter != nil && (errors.Is(err, domain.ErrInvalidCredentials) || errors.Is(err, domain.ErrForbidden)) {
+			h.limiter.Hit(ipKey, emailKey)
+		}
 		data.Error = response.UserFacingMessage(err)
 		h.render.HTML(w, "login.html", data)
 		return
+	}
+	if h.limiter != nil {
+		h.limiter.Clear(emailKey)
 	}
 
 	response.SetSessionCookie(w, result.SessionToken, result.ExpiresAt, h.cookieSecure)
 	if next != "" {
 		http.Redirect(w, r, next, http.StatusSeeOther)
+		return
+	}
+	if result.User.IsAdmin() {
+		http.Redirect(w, r, "/admin", http.StatusSeeOther)
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)

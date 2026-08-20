@@ -26,12 +26,22 @@ internal/adapter/     http, postgres, crypto, mail
 | GET | `/health` | Liveness |
 | GET | `/.well-known/openid-configuration` | OIDC discovery |
 | GET | `/jwks` | Public signing keys |
-| GET/POST | `/register` | Create account |
+| POST | `/register/ticket` | Confidential client (`client_id` + `client_secret`) mints a one-time registration ticket |
+| GET/POST | `/register` | Create account (**requires** `ticket`; otherwise 404) |
 | GET | `/verify-email?token=` | Confirm email |
-| GET/POST | `/login` | Sign in (session cookie) |
+| GET/POST | `/login` | Sign in (session cookie). Rate-limited. No public register link. |
 | POST | `/logout` | End session |
 | GET | `/authorize` | OAuth2 authorization code (supports PKCE `S256`) |
 | POST | `/token` | Exchange code / refresh token |
+| GET | `/invite` | Accept an invite (invite-only apps) |
+
+`GET /` is **404**. `/admin` is **404** unless the session is an admin (no login redirect).
+
+Public (mobile) clients use `token_endpoint_auth_method=none` and **must** send PKCE (`code_challenge` / `code_verifier`). They cannot mint registration tickets. Confidential clients keep `client_secret_post` (PKCE optional) and may mint tickets only when `access_mode=public`.
+
+Invite-only apps never use `/register` — issue an invite in admin instead.
+
+Supported scopes: `openid` (required), `email`, `offline_access` (native apps that store a refresh token).
 
 Public (mobile) clients use `token_endpoint_auth_method=none` and **must** send PKCE (`code_challenge` / `code_verifier`). Confidential clients keep `client_secret_post` (PKCE optional).
 
@@ -53,10 +63,14 @@ On localhost, JWT keys and OAuth client defaults are generated/seeded automatica
 ### OAuth smoke test
 
 ```bash
-# 1. Register at http://localhost:3001/register
-# 2. Copy verify URL from server logs, open in browser
-# 3. Sign in, then open:
-http://localhost:3001/authorize?client_id=dept-app&redirect_uri=http://localhost:4322/auth/callback&response_type=code&scope=openid%20email%20offline_access&state=dev
+# 1. Mint a registration ticket (confidential client + secret from .env)
+curl -sS -X POST http://localhost:3001/register/ticket \
+  -d client_id=auth-test \
+  -d client_secret=dev-secret-change-me-16
+# 2. Open the returned register_url, create the account
+# 3. Copy verify URL from server logs, open in browser
+# 4. Sign in, then open:
+http://localhost:3001/authorize?client_id=auth-test&redirect_uri=http://localhost:4322/auth/callback&response_type=code&scope=openid%20email%20offline_access&state=dev
 ```
 
 ## Production
@@ -67,7 +81,7 @@ Set on the server `.env` only (never commit):
 - `JWT_PRIVATE_KEY` / `JWT_PUBLIC_KEY` (RSA PEM) or `JWT_*_FILE`
 - `OAUTH_CLIENT_SECRET`, `OAUTH_REDIRECT_URI`
 - `COOKIE_SECURE=true`
-- `TURNSTILE_SECRET`, `TURNSTILE_SITE_KEY`
+- `TURNSTILE_SECRET`, `TURNSTILE_SITE_KEY` (**required** in production)
 - SMTP settings (or keep log mailer for debugging)
 
 ## License

@@ -96,6 +96,13 @@
             <button type="submit">Activate</button>
           </form>
           {{end}}
+          {{if and (ne .User.ID $.Actor.ID) (ne .User.Role "admin")}}
+          <form method="post" action="/admin/users/delete" class="actions" onsubmit="return confirm('Delete this account permanently? The email can be used again.');">
+            <input type="hidden" name="user_id" value="{{.User.ID}}">
+            <input type="hidden" name="next" value="/admin/users?q={{$.Query}}&status={{$.Status}}&role={{$.Role}}&client={{$.Client}}&page={{$.Page}}">
+            <button type="submit">Delete</button>
+          </form>
+          {{end}}
         </td>
       </tr>
       {{else}}

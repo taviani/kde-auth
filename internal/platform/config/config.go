@@ -23,10 +23,10 @@ type Config struct {
 	JWTPrivateKeyPEM string
 	JWTPublicKeyPEM  string
 
-	OAuthClientID       string
-	OAuthClientSecret   string
-	OAuthClientName     string
-	OAuthRedirectURI    string
+	OAuthClientID     string
+	OAuthClientSecret string
+	OAuthClientName   string
+	OAuthRedirectURI  string
 
 	SMTPHost     string
 	SMTPPort     int
@@ -55,26 +55,26 @@ func Load() (Config, error) {
 	}
 
 	cfg := Config{
-		Port:             port,
-		Issuer:           strings.TrimRight(os.Getenv("ISSUER"), "/"),
-		DatabaseURL:      os.Getenv("DATABASE_URL"),
-		MigrationsPath:   getEnv("MIGRATIONS_PATH", "migrations"),
-		RegistrationOpen: os.Getenv("REGISTRATION_OPEN") != "false",
-		CookieSecure:     os.Getenv("COOKIE_SECURE") == "true",
-		SessionTTL:       sessionTTL,
-		JWTPrivateKeyPEM: os.Getenv("JWT_PRIVATE_KEY"),
-		JWTPublicKeyPEM:  os.Getenv("JWT_PUBLIC_KEY"),
-		OAuthClientID:       getEnv("OAUTH_CLIENT_ID", "dept-app"),
-		OAuthClientSecret:   os.Getenv("OAUTH_CLIENT_SECRET"),
-		OAuthClientName:     getEnv("OAUTH_CLIENT_NAME", "Department App"),
-		OAuthRedirectURI:    os.Getenv("OAUTH_REDIRECT_URI"),
-		SMTPHost:            os.Getenv("SMTP_HOST"),
-		SMTPPort:            smtpPort,
-		SMTPUser:            os.Getenv("SMTP_USER"),
-		SMTPPassword:        os.Getenv("SMTP_PASSWORD"),
-		SMTPFrom:            os.Getenv("SMTP_FROM"),
-		TurnstileSecret:     os.Getenv("TURNSTILE_SECRET"),
-		TurnstileSiteKey:    os.Getenv("TURNSTILE_SITE_KEY"),
+		Port:              port,
+		Issuer:            strings.TrimRight(os.Getenv("ISSUER"), "/"),
+		DatabaseURL:       os.Getenv("DATABASE_URL"),
+		MigrationsPath:    getEnv("MIGRATIONS_PATH", "migrations"),
+		RegistrationOpen:  os.Getenv("REGISTRATION_OPEN") != "false",
+		CookieSecure:      os.Getenv("COOKIE_SECURE") == "true",
+		SessionTTL:        sessionTTL,
+		JWTPrivateKeyPEM:  os.Getenv("JWT_PRIVATE_KEY"),
+		JWTPublicKeyPEM:   os.Getenv("JWT_PUBLIC_KEY"),
+		OAuthClientID:     getEnv("OAUTH_CLIENT_ID", "dept-app"),
+		OAuthClientSecret: os.Getenv("OAUTH_CLIENT_SECRET"),
+		OAuthClientName:   getEnv("OAUTH_CLIENT_NAME", "Department App"),
+		OAuthRedirectURI:  os.Getenv("OAUTH_REDIRECT_URI"),
+		SMTPHost:          os.Getenv("SMTP_HOST"),
+		SMTPPort:          smtpPort,
+		SMTPUser:          os.Getenv("SMTP_USER"),
+		SMTPPassword:      os.Getenv("SMTP_PASSWORD"),
+		SMTPFrom:          os.Getenv("SMTP_FROM"),
+		TurnstileSecret:   os.Getenv("TURNSTILE_SECRET"),
+		TurnstileSiteKey:  os.Getenv("TURNSTILE_SITE_KEY"),
 	}
 
 	if cfg.Issuer == "" {
@@ -82,6 +82,9 @@ func Load() (Config, error) {
 	}
 	if cfg.DatabaseURL == "" {
 		return Config{}, fmt.Errorf("DATABASE_URL is required")
+	}
+	if !isLocalIssuer(cfg.Issuer) && (cfg.TurnstileSecret == "" || cfg.TurnstileSiteKey == "") {
+		return Config{}, fmt.Errorf("TURNSTILE_SECRET and TURNSTILE_SITE_KEY are required in production")
 	}
 
 	if cfg.JWTPrivateKeyPEM == "" {

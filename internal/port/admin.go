@@ -11,7 +11,9 @@ type UserAdminRepository interface {
 	List(ctx context.Context, filter domain.UserListFilter) ([]domain.User, error)
 	Count(ctx context.Context, filter domain.UserListFilter) (int, error)
 	Stats(ctx context.Context, now time.Time) (domain.UserStats, error)
+	ByID(ctx context.Context, id domain.UserID) (domain.User, error)
 	SetStatus(ctx context.Context, id domain.UserID, status domain.UserStatus, at time.Time) error
+	Delete(ctx context.Context, id domain.UserID) error
 	ListClientIDsForUsers(ctx context.Context, userIDs []domain.UserID) (map[domain.UserID][]domain.ClientID, error)
 }
 

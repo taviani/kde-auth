@@ -36,11 +36,11 @@ func NewRouter(cfg config.Config, h Handlers) http.Handler {
 	r.Use(middleware.Recoverer)
 
 	r.Get("/health", h.Health.ServeHTTP)
-	r.Get("/", h.OIDC.Root)
 
 	r.Get("/.well-known/openid-configuration", h.OIDC.Discovery)
 	r.Get("/jwks", h.OIDC.JWKS)
 
+	r.Post("/register/ticket", h.Register.IssueTicket)
 	r.Get("/register", h.Register.ServeHTTP)
 	r.Post("/register", h.Register.ServeHTTP)
 	r.Get("/login", h.Login.ServeHTTP)
@@ -69,6 +69,7 @@ func NewRouter(cfg config.Config, h Handlers) http.Handler {
 			ar.Get("/", h.Admin.Dashboard)
 			ar.Get("/users", h.Admin.Users)
 			ar.Post("/users/status", h.Admin.SetStatus)
+			ar.Post("/users/delete", h.Admin.DeleteUser)
 			ar.Get("/clients", h.Admin.Clients)
 			ar.Post("/clients", h.Admin.CreateClient)
 			ar.Post("/clients/access-mode", h.Admin.SetAccessMode)

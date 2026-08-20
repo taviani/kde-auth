@@ -11,11 +11,11 @@ import (
 )
 
 type Login struct {
-	users    port.UserRepository
-	sessions port.SessionRepository
-	hasher   port.PasswordHasher
-	captcha  port.CaptchaVerifier
-	clock    port.Clock
+	users      port.UserRepository
+	sessions   port.SessionRepository
+	hasher     port.PasswordHasher
+	captcha    port.CaptchaVerifier
+	clock      port.Clock
 	sessionTTL time.Duration
 }
 
@@ -47,6 +47,7 @@ type LoginInput struct {
 type LoginResult struct {
 	SessionToken string
 	ExpiresAt    time.Time
+	User         domain.User
 }
 
 func (uc *Login) Execute(ctx context.Context, in LoginInput) (LoginResult, error) {
@@ -93,7 +94,7 @@ func (uc *Login) Execute(ctx context.Context, in LoginInput) (LoginResult, error
 	if err := uc.sessions.Create(ctx, session, crypto.HashToken(rawToken)); err != nil {
 		return LoginResult{}, err
 	}
-	return LoginResult{SessionToken: rawToken, ExpiresAt: expiresAt}, nil
+	return LoginResult{SessionToken: rawToken, ExpiresAt: expiresAt, User: user}, nil
 }
 
 type Logout struct {
