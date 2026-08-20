@@ -38,6 +38,13 @@ type PasswordResetToken struct {
 	ExpiresAt time.Time
 }
 
+type RegistrationTicket struct {
+	Token     string
+	ClientID  ClientID
+	ExpiresAt time.Time
+	UsedAt    *time.Time
+}
+
 func ParseScope(scope string) error {
 	if scope == "" {
 		return ValidationError{Field: "scope", Message: "scope is required"}

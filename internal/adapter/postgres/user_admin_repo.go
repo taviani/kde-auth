@@ -117,6 +117,22 @@ func (r *UserAdminRepo) Stats(ctx context.Context, now time.Time) (domain.UserSt
 	return s, rows.Err()
 }
 
+func (r *UserAdminRepo) ByID(ctx context.Context, id domain.UserID) (domain.User, error) {
+	row := r.pool.QueryRow(ctx, selectUserByIDSQL, id)
+	return scanUser(row)
+}
+
+func (r *UserAdminRepo) Delete(ctx context.Context, id domain.UserID) error {
+	tag, err := r.pool.Exec(ctx, `DELETE FROM users WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
 func (r *UserAdminRepo) SetStatus(ctx context.Context, id domain.UserID, status domain.UserStatus, at time.Time) error {
 	tag, err := r.pool.Exec(ctx, `
 		UPDATE users SET status = $2, updated_at = $3 WHERE id = $1

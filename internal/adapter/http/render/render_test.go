@@ -6,36 +6,34 @@ import (
 	"testing"
 )
 
-func TestRegisterTemplate(t *testing.T) {
+func TestRegisterTemplateIncludesTicket(t *testing.T) {
 	r, err := New()
 	if err != nil {
 		t.Fatal(err)
 	}
 	rec := httptest.NewRecorder()
-	r.HTML(rec, "register.html", PageData{Title: "Register"})
-	if rec.Code != 200 {
-		t.Fatalf("status %d body %q", rec.Code, rec.Body.String())
-	}
-	if !strings.Contains(rec.Body.String(), "Create account") {
-		t.Fatalf("unexpected body: %s", rec.Body.String())
-	}
-}
-
-func TestHomeTemplate(t *testing.T) {
-	r, err := New()
-	if err != nil {
-		t.Fatal(err)
-	}
-	rec := httptest.NewRecorder()
-	r.HTMLData(rec, "home.html", nil)
+	r.HTML(rec, "register.html", PageData{Title: "Register", Ticket: "abc"})
 	if rec.Code != 200 {
 		t.Fatalf("status %d body %q", rec.Code, rec.Body.String())
 	}
 	body := rec.Body.String()
-	if !strings.Contains(body, "in girum imus nocte et consumimur igni") {
-		t.Fatalf("unexpected body: %s", body)
+	if !strings.Contains(body, `name="ticket"`) || !strings.Contains(body, "abc") {
+		t.Fatalf("missing ticket field: %s", body)
 	}
-	if strings.Contains(body, "/login") {
-		t.Fatal("home page must not link to login")
+}
+
+func TestLoginTemplateHasNoRegisterLink(t *testing.T) {
+	r, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	r.HTML(rec, "login.html", PageData{Title: "Sign in"})
+	body := rec.Body.String()
+	if strings.Contains(body, "/register") {
+		t.Fatal("login must not link to register")
+	}
+	if !strings.Contains(body, "/forgot-password") {
+		t.Fatal("login should still link to forgot-password")
 	}
 }

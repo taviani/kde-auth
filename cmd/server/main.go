@@ -21,6 +21,7 @@ import (
 	"github.com/taviani/kde-auth/internal/adapter/postgres"
 	"github.com/taviani/kde-auth/internal/adapter/turnstile"
 	"github.com/taviani/kde-auth/internal/platform/config"
+	"github.com/taviani/kde-auth/internal/platform/ratelimit"
 	"github.com/taviani/kde-auth/internal/port"
 	"github.com/taviani/kde-auth/internal/usecase"
 )
@@ -56,6 +57,7 @@ func main() {
 	inviteRepo := postgres.NewInviteRepo(pool)
 	sessionRepo := postgres.NewSessionRepo(pool)
 	tokenRepo := postgres.NewTokenRepo(pool)
+	ticketRepo := postgres.NewRegistrationTicketRepo(pool)
 	healthChecker := postgres.NewHealth(pool)
 
 	seed := postgres.NewSeed(clientRepo, hasher)
@@ -83,9 +85,11 @@ func main() {
 	sessionTTL := time.Duration(cfg.SessionTTL) * time.Hour
 
 	healthUC := usecase.NewHealth(healthChecker)
-	registerUC := usecase.NewRegisterUser(userRepo, hasher, tokenRepo, mailer, captcha, sysClock, issuer, cfg.RegistrationOpen)
+	issueTicketUC := usecase.NewIssueRegisterTicket(clientRepo, ticketRepo, hasher, issuer, sysClock, cfg.RegistrationOpen)
+	registerUC := usecase.NewRegisterUser(userRepo, ticketRepo, appAccessRepo, hasher, tokenRepo, mailer, captcha, sysClock, issuer, cfg.RegistrationOpen)
 	verifyUC := usecase.NewVerifyEmail(userRepo, tokenRepo, sysClock)
 	loginUC := usecase.NewLogin(userRepo, sessionRepo, hasher, captcha, sysClock, sessionTTL)
+	loginLimiter := ratelimit.New(5, 15*time.Minute)
 	logoutUC := usecase.NewLogout(sessionRepo, sysClock)
 	resolveSessionUC := usecase.NewResolveSession(sessionRepo, userRepo, sysClock)
 	recordAccessUC := usecase.NewRecordAppAccess(appAccessRepo, sysClock)
@@ -111,8 +115,8 @@ func main() {
 	adminHandler := handler.NewAdmin(adminUC, adminClientsUC, adminInvitesUC, renderer)
 	router := httpadapter.NewRouter(cfg, httpadapter.Handlers{
 		Health:         handler.NewHealth(healthUC),
-		Register:       handler.NewRegister(registerUC, renderer, cfg.TurnstileSiteKey),
-		Login:          handler.NewLogin(loginUC, renderer, cfg.TurnstileSiteKey, cfg.CookieSecure),
+		Register:       handler.NewRegister(registerUC, issueTicketUC, renderer, cfg.TurnstileSiteKey),
+		Login:          handler.NewLogin(loginUC, loginLimiter, renderer, cfg.TurnstileSiteKey, cfg.CookieSecure),
 		VerifyEmail:    handler.NewVerifyEmail(verifyUC, renderer),
 		Logout:         handler.NewLogout(logoutUC, cfg.CookieSecure),
 		ForgotPassword: handler.NewForgotPassword(forgotUC, renderer, cfg.TurnstileSiteKey),
@@ -122,7 +126,7 @@ func main() {
 		Authorize:      handler.NewAuthorize(authorizeUC, logoutUC, cfg.CookieSecure),
 		Token:          handler.NewToken(tokenUC),
 		UserInfo:       handler.NewUserInfo(userInfoUC, issuer),
-		OIDC:           handler.NewOIDC(oidcUC, issuer, renderer),
+		OIDC:           handler.NewOIDC(oidcUC, issuer),
 		Admin:          adminHandler,
 		RequireAdmin:   handler.RequireAdmin(resolveSessionUC),
 	})

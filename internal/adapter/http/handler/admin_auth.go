@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"net/http"
-	"net/url"
 
 	"github.com/taviani/kde-auth/internal/adapter/http/response"
 	"github.com/taviani/kde-auth/internal/domain"
@@ -23,13 +22,8 @@ func RequireAdmin(resolve *usecase.ResolveSession) func(http.Handler) http.Handl
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, err := resolve.Execute(r.Context(), response.SessionToken(r))
-			if err != nil {
-				nextURL := r.URL.RequestURI()
-				http.Redirect(w, r, "/login?next="+url.QueryEscape(nextURL), http.StatusSeeOther)
-				return
-			}
-			if !user.IsAdmin() {
-				http.Error(w, "forbidden", http.StatusForbidden)
+			if err != nil || !user.IsAdmin() {
+				http.NotFound(w, r)
 				return
 			}
 			ctx := context.WithValue(r.Context(), adminUserKey, user)

@@ -33,8 +33,11 @@ func WriteError(w http.ResponseWriter, err error) {
 		WriteJSON(w, http.StatusBadRequest, oauthError("invalid_grant", err.Error()))
 	case errors.Is(err, domain.ErrEmailTaken):
 		WriteJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
-	case errors.Is(err, domain.ErrRegistrationClosed):
+	case errors.Is(err, domain.ErrRegistrationClosed),
+		errors.Is(err, domain.ErrInviteOnlyRegistration):
 		WriteJSON(w, http.StatusForbidden, map[string]string{"error": err.Error()})
+	case errors.Is(err, domain.ErrTooManyAttempts):
+		WriteJSON(w, http.StatusTooManyRequests, map[string]string{"error": err.Error()})
 	default:
 		var v domain.ValidationError
 		if errors.As(err, &v) {
@@ -57,6 +60,10 @@ func UserFacingMessage(err error) string {
 		return "An account with this email already exists."
 	case errors.Is(err, domain.ErrRegistrationClosed):
 		return "Registration is currently closed."
+	case errors.Is(err, domain.ErrInviteOnlyRegistration):
+		return "This application is invite-only. Use the invite link you received."
+	case errors.Is(err, domain.ErrTooManyAttempts):
+		return "Too many attempts. Try again later."
 	case errors.Is(err, domain.ErrCaptchaFailed):
 		return "Captcha verification failed. Please try again."
 	case errors.Is(err, domain.ErrInvalidToken):
