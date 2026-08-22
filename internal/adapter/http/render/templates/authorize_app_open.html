@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · kde-auth</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 420px; margin: 3rem auto; padding: 0 1rem; color: #1a1a1a; text-align: center; }
+    h1 { font-size: 1.4rem; margin-bottom: 0.5rem; }
+    p { color: #555; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem; }
+    a.btn {
+      display: inline-block;
+      padding: 0.75rem 1.25rem;
+      background: #111;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+    a.btn:active { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <h1>{{.Title}}</h1>
+  <p>Connexion réussie. Ouvrez l’application pour continuer.</p>
+  <p><a class="btn" href="{{.RedirectURL}}">Ouvrir l’application</a></p>
+</body>
+</html>
