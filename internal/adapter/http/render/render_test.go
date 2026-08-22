@@ -49,11 +49,11 @@ func TestAuthorizeAppOpenTemplate(t *testing.T) {
 		Title       string
 		RedirectURL template.URL
 	}{
-		Title:       "Ouvrir l'application",
+		Title:       "Open app",
 		RedirectURL: template.URL("app://callback?code=abc&state=dev"),
 	})
 	body := rec.Body.String()
-	if !strings.Contains(body, "Ouvrir l") {
+	if !strings.Contains(body, "Open app") {
 		t.Fatalf("missing title: %s", body)
 	}
 	if !strings.Contains(body, `href="app://callback?code=abc&amp;state=dev"`) {

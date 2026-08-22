@@ -62,7 +62,7 @@ func (h *Authorize) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Title       string
 			RedirectURL template.URL
 		}{
-			Title:       "Ouvrir l'application",
+			Title:       "Open app",
 			RedirectURL: template.URL(result.RedirectURL),
 		})
 		return
