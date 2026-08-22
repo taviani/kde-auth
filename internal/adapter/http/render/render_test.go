@@ -1,6 +1,7 @@
 package render
 
 import (
+	"html/template"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -35,5 +36,27 @@ func TestLoginTemplateHasNoRegisterLink(t *testing.T) {
 	}
 	if !strings.Contains(body, "/forgot-password") {
 		t.Fatal("login should still link to forgot-password")
+	}
+}
+
+func TestAuthorizeAppOpenTemplate(t *testing.T) {
+	r, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	r.HTMLData(rec, "authorize_app_open.html", struct {
+		Title       string
+		RedirectURL template.URL
+	}{
+		Title:       "Open app",
+		RedirectURL: template.URL("app://callback?code=abc&state=dev"),
+	})
+	body := rec.Body.String()
+	if !strings.Contains(body, "Open app") {
+		t.Fatalf("missing title: %s", body)
+	}
+	if !strings.Contains(body, `href="app://callback?code=abc&amp;state=dev"`) {
+		t.Fatalf("missing redirect link: %s", body)
 	}
 }

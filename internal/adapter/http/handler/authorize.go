@@ -2,9 +2,11 @@ package handler
 
 import (
 	"errors"
+	"html/template"
 	"net/http"
 	"net/url"
 
+	"github.com/taviani/kde-auth/internal/adapter/http/render"
 	"github.com/taviani/kde-auth/internal/adapter/http/response"
 	"github.com/taviani/kde-auth/internal/domain"
 	"github.com/taviani/kde-auth/internal/usecase"
@@ -13,11 +15,12 @@ import (
 type Authorize struct {
 	uc           *usecase.Authorize
 	logout       *usecase.Logout
+	render       *render.Renderer
 	cookieSecure bool
 }
 
-func NewAuthorize(uc *usecase.Authorize, logout *usecase.Logout, cookieSecure bool) *Authorize {
-	return &Authorize{uc: uc, logout: logout, cookieSecure: cookieSecure}
+func NewAuthorize(uc *usecase.Authorize, logout *usecase.Logout, render *render.Renderer, cookieSecure bool) *Authorize {
+	return &Authorize{uc: uc, logout: logout, render: render, cookieSecure: cookieSecure}
 }
 
 func (h *Authorize) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -52,6 +55,16 @@ func (h *Authorize) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		response.WriteError(w, err)
+		return
+	}
+	if usesCustomRedirectScheme(result.RedirectURL) && h.render != nil {
+		h.render.HTMLData(w, "authorize_app_open.html", struct {
+			Title       string
+			RedirectURL template.URL
+		}{
+			Title:       "Open app",
+			RedirectURL: template.URL(result.RedirectURL),
+		})
 		return
 	}
 	http.Redirect(w, r, result.RedirectURL, http.StatusFound)
