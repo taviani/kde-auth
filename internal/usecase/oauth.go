@@ -48,7 +48,8 @@ type AuthorizeInput struct {
 }
 
 type AuthorizeResult struct {
-	RedirectURL string
+	RedirectURL    string
+	AndroidPackage string
 }
 
 func (uc *Authorize) Execute(ctx context.Context, in AuthorizeInput) (AuthorizeResult, error) {
@@ -131,7 +132,7 @@ func (uc *Authorize) Execute(ctx context.Context, in AuthorizeInput) (AuthorizeR
 	if err != nil {
 		return AuthorizeResult{}, err
 	}
-	return AuthorizeResult{RedirectURL: redirectURL}, nil
+	return AuthorizeResult{RedirectURL: redirectURL, AndroidPackage: client.AndroidPackage}, nil
 }
 
 func buildRedirect(redirectURI, code, state string) (string, error) {
