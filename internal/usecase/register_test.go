@@ -340,6 +340,9 @@ func (m *memAdminUsers) Delete(_ context.Context, id domain.UserID) error {
 func (m *memAdminUsers) ListClientIDsForUsers(context.Context, []domain.UserID) (map[domain.UserID][]domain.ClientID, error) {
 	return map[domain.UserID][]domain.ClientID{}, nil
 }
+func (m *memAdminUsers) ListActivityStatsForUsers(context.Context, []domain.UserID, time.Time) (map[domain.UserID]domain.UserActivityStats, error) {
+	return map[domain.UserID]domain.UserActivityStats{}, nil
+}
 
 type memSessions struct{}
 

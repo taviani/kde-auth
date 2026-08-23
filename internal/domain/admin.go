@@ -28,6 +28,17 @@ type ClientUserCount struct {
 	Count    int
 }
 
+type UserActivityStats struct {
+	HasActiveSession      bool
+	HasActiveRefreshToken bool
+	SessionCount          int
+	LastSessionAt         *time.Time
+}
+
+func (s UserActivityStats) IsConnected() bool {
+	return s.HasActiveSession || s.HasActiveRefreshToken
+}
+
 type UserListFilter struct {
 	Query    string
 	Status   UserStatus

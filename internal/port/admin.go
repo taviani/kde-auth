@@ -15,6 +15,7 @@ type UserAdminRepository interface {
 	SetStatus(ctx context.Context, id domain.UserID, status domain.UserStatus, at time.Time) error
 	Delete(ctx context.Context, id domain.UserID) error
 	ListClientIDsForUsers(ctx context.Context, userIDs []domain.UserID) (map[domain.UserID][]domain.ClientID, error)
+	ListActivityStatsForUsers(ctx context.Context, userIDs []domain.UserID, now time.Time) (map[domain.UserID]domain.UserActivityStats, error)
 }
 
 type AppAccessRepository interface {
