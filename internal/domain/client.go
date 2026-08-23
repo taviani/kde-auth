@@ -48,6 +48,7 @@ type OAuthClient struct {
 	RedirectURIs             []string
 	AccessMode               AccessMode
 	TokenEndpointAuthMethod  TokenEndpointAuthMethod
+	AndroidPackage           string // Play package for intent:// deep links from Custom Tabs
 }
 
 func (c OAuthClient) AllowsRedirectURI(uri string) bool {

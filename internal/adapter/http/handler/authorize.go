@@ -58,12 +58,13 @@ func (h *Authorize) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if usesCustomRedirectScheme(result.RedirectURL) && h.render != nil {
+		openURL := appOpenRedirectURL(r.UserAgent(), result.RedirectURL, result.AndroidPackage)
 		h.render.HTMLData(w, "authorize_app_open.html", struct {
 			Title       string
 			RedirectURL template.URL
 		}{
 			Title:       "Open app",
-			RedirectURL: template.URL(result.RedirectURL),
+			RedirectURL: template.URL(openURL),
 		})
 		return
 	}
