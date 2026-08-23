@@ -176,6 +176,51 @@ func (r *UserAdminRepo) ListClientIDsForUsers(ctx context.Context, userIDs []dom
 	return out, rows.Err()
 }
 
+func (r *UserAdminRepo) ListActivityStatsForUsers(ctx context.Context, userIDs []domain.UserID, now time.Time) (map[domain.UserID]domain.UserActivityStats, error) {
+	out := make(map[domain.UserID]domain.UserActivityStats)
+	if len(userIDs) == 0 {
+		return out, nil
+	}
+	ids := make([]string, len(userIDs))
+	for i, id := range userIDs {
+		ids[i] = string(id)
+	}
+	rows, err := r.pool.Query(ctx, `
+		SELECT
+			u.id,
+			EXISTS (
+				SELECT 1 FROM sessions s
+				WHERE s.user_id = u.id AND s.revoked_at IS NULL AND s.expires_at > $2
+			),
+			EXISTS (
+				SELECT 1 FROM refresh_tokens rt
+				WHERE rt.user_id = u.id AND rt.revoked_at IS NULL AND rt.expires_at > $2
+			),
+			(SELECT COUNT(*)::int FROM sessions s WHERE s.user_id = u.id),
+			(SELECT MAX(s.created_at) FROM sessions s WHERE s.user_id = u.id)
+		FROM unnest($1::uuid[]) AS u(id)
+	`, ids, now)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var uid domain.UserID
+		var stats domain.UserActivityStats
+		if err := rows.Scan(
+			&uid,
+			&stats.HasActiveSession,
+			&stats.HasActiveRefreshToken,
+			&stats.SessionCount,
+			&stats.LastSessionAt,
+		); err != nil {
+			return nil, err
+		}
+		out[uid] = stats
+	}
+	return out, rows.Err()
+}
+
 func userFilterJoin(filter domain.UserListFilter) string {
 	if filter.ClientID != "" {
 		return `INNER JOIN user_app_accesses a ON a.user_id = u.id`

@@ -28,6 +28,7 @@ func NewAdminUsers(
 type AdminUserRow struct {
 	User      domain.User
 	ClientIDs []domain.ClientID
+	Activity  domain.UserActivityStats
 }
 
 type AdminUsersResult struct {
@@ -61,9 +62,17 @@ func (uc *AdminUsers) List(ctx context.Context, filter domain.UserListFilter) (A
 	if err != nil {
 		return AdminUsersResult{}, err
 	}
+	activity, err := uc.users.ListActivityStatsForUsers(ctx, ids, uc.clock.Now())
+	if err != nil {
+		return AdminUsersResult{}, err
+	}
 	rows := make([]AdminUserRow, 0, len(users))
 	for _, u := range users {
-		rows = append(rows, AdminUserRow{User: u, ClientIDs: apps[u.ID]})
+		rows = append(rows, AdminUserRow{
+			User:      u,
+			ClientIDs: apps[u.ID],
+			Activity:  activity[u.ID],
+		})
 	}
 	stats, err := uc.users.Stats(ctx, uc.clock.Now())
 	if err != nil {
