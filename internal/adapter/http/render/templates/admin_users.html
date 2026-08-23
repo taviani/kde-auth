@@ -80,6 +80,11 @@
         <td class="apps">{{range $i, $c := .ClientIDs}}{{if $i}}, {{end}}{{$c}}{{else}}—{{end}}</td>
         <td>{{.User.CreatedAt.Format "2006-01-02"}}</td>
         <td class="actions">
+          <form method="post" action="/admin/users/revoke-sessions" class="actions" onsubmit="return confirm('Revoke all browser sessions and app refresh tokens for this user? They will need to sign in again.');">
+            <input type="hidden" name="user_id" value="{{.User.ID}}">
+            <input type="hidden" name="next" value="/admin/users?q={{$.Query}}&status={{$.Status}}&role={{$.Role}}&client={{$.Client}}&page={{$.Page}}">
+            <button type="submit">Revoke sessions</button>
+          </form>
           {{if ne .User.Status "suspended"}}
           <form method="post" action="/admin/users/status" class="actions">
             <input type="hidden" name="user_id" value="{{.User.ID}}">

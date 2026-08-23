@@ -10,12 +10,19 @@ import (
 )
 
 type AdminUsers struct {
-	users port.UserAdminRepository
-	clock port.Clock
+	users    port.UserAdminRepository
+	sessions port.SessionRepository
+	tokens   port.TokenRepository
+	clock    port.Clock
 }
 
-func NewAdminUsers(users port.UserAdminRepository, clock port.Clock) *AdminUsers {
-	return &AdminUsers{users: users, clock: clock}
+func NewAdminUsers(
+	users port.UserAdminRepository,
+	sessions port.SessionRepository,
+	tokens port.TokenRepository,
+	clock port.Clock,
+) *AdminUsers {
+	return &AdminUsers{users: users, sessions: sessions, tokens: tokens, clock: clock}
 }
 
 type AdminUserRow struct {
@@ -98,6 +105,23 @@ func (uc *AdminUsers) Delete(ctx context.Context, actor domain.User, id domain.U
 		return domain.ValidationError{Field: "user_id", Message: "cannot delete an admin account"}
 	}
 	return uc.users.Delete(ctx, id)
+}
+
+func (uc *AdminUsers) RevokeSessions(ctx context.Context, actor domain.User, id domain.UserID) error {
+	if !actor.IsAdmin() {
+		return domain.ErrForbidden
+	}
+	if id == "" {
+		return domain.ValidationError{Field: "user_id", Message: "required"}
+	}
+	if _, err := uc.users.ByID(ctx, id); err != nil {
+		return err
+	}
+	now := uc.clock.Now()
+	if err := uc.sessions.RevokeAllForUser(ctx, id, now); err != nil {
+		return err
+	}
+	return uc.tokens.RevokeAllRefreshTokensForUser(ctx, id, now)
 }
 
 type RecordAppAccess struct {

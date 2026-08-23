@@ -69,6 +69,7 @@ func NewRouter(cfg config.Config, h Handlers) http.Handler {
 			ar.Get("/", h.Admin.Dashboard)
 			ar.Get("/users", h.Admin.Users)
 			ar.Post("/users/status", h.Admin.SetStatus)
+			ar.Post("/users/revoke-sessions", h.Admin.RevokeUserSessions)
 			ar.Post("/users/delete", h.Admin.DeleteUser)
 			ar.Get("/clients", h.Admin.Clients)
 			ar.Post("/clients", h.Admin.CreateClient)
