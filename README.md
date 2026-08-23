@@ -73,18 +73,6 @@ curl -sS -X POST http://localhost:3001/register/ticket \
 http://localhost:3001/authorize?client_id=auth-test&redirect_uri=http://localhost:4322/auth/callback&response_type=code&scope=openid%20email%20offline_access&state=dev
 ```
 
-### Native app redirect (`app://`, custom schemes)
-
-After `/authorize`, custom-scheme redirect URIs return a **200 HTML page** with an **Open app** button (instead of an HTTP 302 that Chrome shows as “Found”).
-
-On **Android** (Chrome Custom Tabs), the button uses an `intent://…#Intent;scheme=…;package=…;end` link when the OAuth client has `android_package` set. **iOS** keeps the original custom-scheme URL.
-
-Set the Play package on the server (not in git):
-
-```sql
-UPDATE oauth_clients SET android_package = 'com.your.app' WHERE client_id = 'your-client-id';
-```
-
 ## Production
 
 Set on the server `.env` only (never commit):
