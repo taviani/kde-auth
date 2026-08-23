@@ -132,6 +132,13 @@ func (r *TokenRepo) RevokeRefreshToken(ctx context.Context, tokenHash string, at
 	return err
 }
 
+func (r *TokenRepo) RevokeAllRefreshTokensForUser(ctx context.Context, userID domain.UserID, at time.Time) error {
+	_, err := r.pool.Exec(ctx, `
+		UPDATE refresh_tokens SET revoked_at = $2 WHERE user_id = $1 AND revoked_at IS NULL
+	`, userID, at)
+	return err
+}
+
 func (r *TokenRepo) CreateEmailVerificationToken(ctx context.Context, token domain.EmailVerificationToken, tokenHash string) error {
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO email_verification_tokens (token_hash, user_id, expires_at)

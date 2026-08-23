@@ -195,6 +195,9 @@ func (memTokens) ConsumeRefreshToken(context.Context, string, time.Time) (domain
 	return domain.RefreshToken{}, domain.ErrNotFound
 }
 func (memTokens) RevokeRefreshToken(context.Context, string, time.Time) error { return nil }
+func (memTokens) RevokeAllRefreshTokensForUser(context.Context, domain.UserID, time.Time) error {
+	return nil
+}
 func (memTokens) CreateEmailVerificationToken(context.Context, domain.EmailVerificationToken, string) error {
 	return nil
 }
@@ -256,6 +259,33 @@ func TestRegisterUserRequiresTicket(t *testing.T) {
 	}
 }
 
+func TestAdminRevokeSessions(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	repo := &memAdminUsers{byID: map[domain.UserID]domain.User{
+		"admin": {ID: "admin", Role: domain.RoleAdmin, Email: "admin@example.com"},
+		"user":  {ID: "user", Role: domain.RoleUser, Email: "u@example.com"},
+	}}
+	sessions := &trackingSessions{}
+	tokens := &trackingRefreshTokens{}
+	uc := NewAdminUsers(repo, sessions, tokens, frozenClock{t: now})
+	actor := repo.byID["admin"]
+
+	if err := uc.RevokeSessions(context.Background(), actor, "user"); err != nil {
+		t.Fatal(err)
+	}
+	if len(sessions.revoked) != 1 || sessions.revoked[0] != "user" {
+		t.Fatalf("sessions revoked: %+v", sessions.revoked)
+	}
+	if len(tokens.revoked) != 1 || tokens.revoked[0] != "user" {
+		t.Fatalf("refresh tokens revoked: %+v", tokens.revoked)
+	}
+
+	nonAdmin := repo.byID["user"]
+	if err := uc.RevokeSessions(context.Background(), nonAdmin, "admin"); !errors.Is(err, domain.ErrForbidden) {
+		t.Fatalf("expected forbidden, got %v", err)
+	}
+}
+
 func TestAdminDeleteRejectsSelfAndAdmins(t *testing.T) {
 	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
 	repo := &memAdminUsers{byID: map[domain.UserID]domain.User{
@@ -263,7 +293,7 @@ func TestAdminDeleteRejectsSelfAndAdmins(t *testing.T) {
 		"other-admin": {ID: "other-admin", Role: domain.RoleAdmin, Email: "a2@example.com"},
 		"user":  {ID: "user", Role: domain.RoleUser, Email: "u@example.com"},
 	}}
-	uc := NewAdminUsers(repo, frozenClock{t: now})
+	uc := NewAdminUsers(repo, memSessions{}, memTokens{}, frozenClock{t: now})
 	actor := repo.byID["admin"]
 	if err := uc.Delete(context.Background(), actor, "admin"); err == nil {
 		t.Fatal("expected self-delete to fail")
@@ -309,4 +339,63 @@ func (m *memAdminUsers) Delete(_ context.Context, id domain.UserID) error {
 }
 func (m *memAdminUsers) ListClientIDsForUsers(context.Context, []domain.UserID) (map[domain.UserID][]domain.ClientID, error) {
 	return map[domain.UserID][]domain.ClientID{}, nil
+}
+
+type memSessions struct{}
+
+func (memSessions) Create(context.Context, domain.Session, string) error { return nil }
+func (memSessions) ByTokenHash(context.Context, string, time.Time) (domain.Session, error) {
+	return domain.Session{}, domain.ErrNotFound
+}
+func (memSessions) Revoke(context.Context, string, time.Time) error { return nil }
+func (memSessions) RevokeAllForUser(context.Context, domain.UserID, time.Time) error {
+	return nil
+}
+
+type trackingSessions struct {
+	revoked []domain.UserID
+}
+
+func (m *trackingSessions) Create(context.Context, domain.Session, string) error { return nil }
+func (m *trackingSessions) ByTokenHash(context.Context, string, time.Time) (domain.Session, error) {
+	return domain.Session{}, domain.ErrNotFound
+}
+func (m *trackingSessions) Revoke(context.Context, string, time.Time) error { return nil }
+func (m *trackingSessions) RevokeAllForUser(_ context.Context, userID domain.UserID, _ time.Time) error {
+	m.revoked = append(m.revoked, userID)
+	return nil
+}
+
+type trackingRefreshTokens struct {
+	revoked []domain.UserID
+}
+
+func (m *trackingRefreshTokens) CreateAuthorizationCode(context.Context, domain.AuthorizationCode, string) error {
+	return nil
+}
+func (m *trackingRefreshTokens) ConsumeAuthorizationCode(context.Context, string, time.Time) (domain.AuthorizationCode, error) {
+	return domain.AuthorizationCode{}, domain.ErrNotFound
+}
+func (m *trackingRefreshTokens) CreateRefreshToken(context.Context, domain.RefreshToken, string) error {
+	return nil
+}
+func (m *trackingRefreshTokens) ConsumeRefreshToken(context.Context, string, time.Time) (domain.RefreshToken, error) {
+	return domain.RefreshToken{}, domain.ErrNotFound
+}
+func (m *trackingRefreshTokens) RevokeRefreshToken(context.Context, string, time.Time) error { return nil }
+func (m *trackingRefreshTokens) RevokeAllRefreshTokensForUser(_ context.Context, userID domain.UserID, _ time.Time) error {
+	m.revoked = append(m.revoked, userID)
+	return nil
+}
+func (m *trackingRefreshTokens) CreateEmailVerificationToken(context.Context, domain.EmailVerificationToken, string) error {
+	return nil
+}
+func (m *trackingRefreshTokens) ConsumeEmailVerificationToken(context.Context, string, time.Time) (domain.EmailVerificationToken, error) {
+	return domain.EmailVerificationToken{}, domain.ErrNotFound
+}
+func (m *trackingRefreshTokens) CreatePasswordResetToken(context.Context, domain.PasswordResetToken, string) error {
+	return nil
+}
+func (m *trackingRefreshTokens) ConsumePasswordResetToken(context.Context, string, time.Time) (domain.PasswordResetToken, error) {
+	return domain.PasswordResetToken{}, domain.ErrNotFound
 }

@@ -97,7 +97,7 @@ func main() {
 	tokenUC := usecase.NewExchangeToken(clientRepo, tokenRepo, userRepo, hasher, issuer, sysClock)
 	userInfoUC := usecase.NewUserInfo(issuer, userRepo)
 	oidcUC := usecase.NewOIDCMetadata(issuer)
-	adminUC := usecase.NewAdminUsers(userAdminRepo, sysClock)
+	adminUC := usecase.NewAdminUsers(userAdminRepo, sessionRepo, tokenRepo, sysClock)
 	adminClientsUC := usecase.NewAdminClients(clientRepo, hasher)
 	adminInvitesUC := usecase.NewAdminInvites(inviteRepo, clientRepo, mailer, issuer, sysClock)
 	acceptInviteUC := usecase.NewAcceptInvite(
