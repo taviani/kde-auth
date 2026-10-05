@@ -4,7 +4,7 @@ Shared OIDC authentication service for your projects.
 
 ## Stack
 
-- **Go 1.25** — chi router, pgx, stdlib-first
+- **Go 1.26** — chi router, pgx, stdlib-first
 - **PostgreSQL** — plain SQL migrations
 - **RS256 JWT** — JWKS for API verification
 - Docker Compose for local development
