@@ -29,6 +29,7 @@ type PageData struct {
 	Next             string
 	Token            string
 	Ticket           string
+	RegisterURL      string
 	TurnstileSiteKey string
 }
 

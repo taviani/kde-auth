@@ -29,7 +29,7 @@ internal/adapter/     http, postgres, crypto, mail
 | POST | `/register/ticket` | Confidential client (`client_id` + `client_secret`) mints a one-time registration ticket |
 | GET/POST | `/register` | Create account (**requires** `ticket`; otherwise 404) |
 | GET | `/verify-email?token=` | Confirm email |
-| GET/POST | `/login` | Sign in (session cookie). Rate-limited. No public register link. |
+| GET/POST | `/login` | Sign in (session cookie). Rate-limited. A public client that is not invite-only gets a Sign up link; invite-only and confidential clients do not. |
 | POST | `/logout` | End session |
 | GET | `/authorize` | OAuth2 authorization code (supports PKCE `S256`) |
 | POST | `/token` | Exchange code / refresh token |
