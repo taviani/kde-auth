@@ -140,10 +140,14 @@ func (r *TokenRepo) RevokeAllRefreshTokensForUser(ctx context.Context, userID do
 }
 
 func (r *TokenRepo) CreateEmailVerificationToken(ctx context.Context, token domain.EmailVerificationToken, tokenHash string) error {
+	var email any
+	if token.Email != "" {
+		email = token.Email.String()
+	}
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO email_verification_tokens (token_hash, user_id, expires_at)
-		VALUES ($1, $2, $3)
-	`, tokenHash, token.UserID, token.ExpiresAt)
+		INSERT INTO email_verification_tokens (token_hash, user_id, email, expires_at)
+		VALUES ($1, $2, $3, $4)
+	`, tokenHash, token.UserID, email, token.ExpiresAt)
 	return err
 }
 
@@ -155,15 +159,16 @@ func (r *TokenRepo) ConsumeEmailVerificationToken(ctx context.Context, tokenHash
 	defer tx.Rollback(ctx)
 
 	row := tx.QueryRow(ctx, `
-		SELECT user_id, expires_at, used_at
+		SELECT user_id, COALESCE(email, ''), expires_at, used_at
 		FROM email_verification_tokens
 		WHERE token_hash = $1
 		FOR UPDATE
 	`, tokenHash)
 
 	var t domain.EmailVerificationToken
+	var emailStr string
 	var usedAt *time.Time
-	err = row.Scan(&t.UserID, &t.ExpiresAt, &usedAt)
+	err = row.Scan(&t.UserID, &emailStr, &t.ExpiresAt, &usedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.EmailVerificationToken{}, domain.ErrNotFound
 	}
@@ -173,6 +178,7 @@ func (r *TokenRepo) ConsumeEmailVerificationToken(ctx context.Context, tokenHash
 	if usedAt != nil || !at.Before(t.ExpiresAt) {
 		return domain.EmailVerificationToken{}, domain.ErrInvalidToken
 	}
+	t.Email = domain.Email(emailStr)
 
 	if _, err := tx.Exec(ctx, `UPDATE email_verification_tokens SET used_at = $2 WHERE token_hash = $1`, tokenHash, at); err != nil {
 		return domain.EmailVerificationToken{}, err

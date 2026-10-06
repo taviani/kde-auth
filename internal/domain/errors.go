@@ -19,6 +19,8 @@ var (
 	ErrInvalidToken           = errors.New("invalid token")
 	ErrCaptchaFailed          = errors.New("captcha verification failed")
 	ErrValidation             = errors.New("validation failed")
+	ErrEmailLimitReached      = errors.New("email limit reached")
+	ErrCannotDeleteLastEmail  = errors.New("cannot delete last verified email")
 )
 
 type ValidationError struct {
