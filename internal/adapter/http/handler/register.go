@@ -91,7 +91,7 @@ func (h *Register) post(w http.ResponseWriter, r *http.Request) {
 		Ticket:       ticket,
 	})
 	if err != nil {
-		if errors.Is(err, domain.ErrInvalidToken) || errors.Is(err, domain.ErrRegistrationClosed) {
+		if errors.Is(err, domain.ErrInvalidToken) || errors.Is(err, domain.ErrRegistrationClosed) || errors.Is(err, domain.ErrInviteOnlyRegistration) {
 			http.NotFound(w, r)
 			return
 		}

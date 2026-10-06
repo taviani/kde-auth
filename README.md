@@ -27,7 +27,7 @@ internal/adapter/     http, postgres, crypto, mail
 | GET | `/.well-known/openid-configuration` | OIDC discovery |
 | GET | `/jwks` | Public signing keys |
 | POST | `/register/ticket` | Confidential client (`client_id` + `client_secret`) mints a one-time registration ticket |
-| GET/POST | `/register` | Create account with a one-time `ticket` (from `/register/ticket` or login **Sign up**). Missing or invalid ticket → 404 |
+| GET/POST | `/register` | Create account with a one-time `ticket` (from `/register/ticket` or login **Sign up**). Bare URL, closed registration (`REGISTRATION_OPEN=false`), invalid/expired ticket, or invite-only client → 404 |
 | GET | `/verify-email?token=` | Confirm email |
 | GET/POST | `/login` | Sign in (session cookie). Rate-limited. A public client that is not invite-only gets a Sign up link; invite-only and confidential clients do not. |
 | POST | `/logout` | End session |
@@ -41,7 +41,7 @@ internal/adapter/     http, postgres, crypto, mail
 
 Public (mobile) clients use `token_endpoint_auth_method=none` and **must** send PKCE (`code_challenge` / `code_verifier`). They cannot call `/register/ticket`; registration is via the login **Sign up** link (issuer-minted ticket). Confidential clients keep `client_secret_post` (PKCE optional) and may mint tickets via `/register/ticket` when `access_mode=public`.
 
-Invite-only apps never use `/register` — issue an invite in admin instead.
+Invite-only apps never use `/register` — issue an invite in admin instead. A ticket whose client was switched to `invite_only` is also rejected at `/register`.
 
 Supported scopes: `openid` (required), `email`, `offline_access` (native apps that store a refresh token).
 
