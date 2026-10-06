@@ -91,6 +91,31 @@ func (uc *IssueRegisterTicket) Execute(ctx context.Context, in IssueRegisterTick
 	}, nil
 }
 
+// LinkForPublicClient mints a one-time registration path for a public client
+// that is not invite-only. The login page uses it. Confidential clients and
+// invite-only clients get no link. The ticket API still refuses public clients.
+func (uc *IssueRegisterTicket) LinkForPublicClient(ctx context.Context, clientID string) (string, bool) {
+	if !uc.registrationOpen || clientID == "" {
+		return "", false
+	}
+	client, err := uc.clients.ByClientID(ctx, domain.ClientID(clientID))
+	if err != nil || !client.IsPublic() || client.IsInviteOnly() {
+		return "", false
+	}
+	raw, err := crypto.RandomToken(32)
+	if err != nil {
+		return "", false
+	}
+	now := uc.clock.Now()
+	if err := uc.tickets.Create(ctx, domain.RegistrationTicket{
+		ClientID:  client.ClientID,
+		ExpiresAt: now.Add(registrationTicketTTL),
+	}, crypto.HashToken(raw)); err != nil {
+		return "", false
+	}
+	return "/register?ticket=" + raw, true
+}
+
 type RegisterUser struct {
 	users            port.UserRepository
 	tickets          port.RegistrationTicketRepository

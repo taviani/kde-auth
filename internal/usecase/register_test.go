@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -133,6 +134,48 @@ func TestIssueRegisterTicketRejectsPublicAndInviteOnlyClients(t *testing.T) {
 	}
 	if got.Ticket == "" || got.ExpiresIn != 600 {
 		t.Fatalf("ticket result: %+v", got)
+	}
+}
+
+func TestLinkForPublicClientSkipsInviteOnlyAndConfidential(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	clients := &memClients{byID: map[domain.ClientID]domain.OAuthClient{
+		"web-app": publicAccessClient(),
+		"mobile": {
+			ClientID:                "mobile",
+			Name:                    "Mobile",
+			RedirectURIs:            []string{"app://cb"},
+			AccessMode:              domain.AccessModePublic,
+			TokenEndpointAuthMethod: domain.TokenAuthNone,
+		},
+		"invited": {
+			ClientID:                "invited",
+			Name:                    "Invited",
+			RedirectURIs:            []string{"app://cb"},
+			AccessMode:              domain.AccessModeInviteOnly,
+			TokenEndpointAuthMethod: domain.TokenAuthNone,
+		},
+	}}
+	tickets := &memTickets{}
+	uc := NewIssueRegisterTicket(clients, tickets, stubHasher{}, stubIssuer{url: "https://auth.example"}, frozenClock{t: now}, true)
+
+	path, ok := uc.LinkForPublicClient(context.Background(), "mobile")
+	if !ok || !strings.HasPrefix(path, "/register?ticket=") {
+		t.Fatalf("public client link: %q %v", path, ok)
+	}
+	if _, ok := uc.LinkForPublicClient(context.Background(), "invited"); ok {
+		t.Fatal("invite-only client must not get a signup link")
+	}
+	if _, ok := uc.LinkForPublicClient(context.Background(), "web-app"); ok {
+		t.Fatal("confidential client must not get a signup link")
+	}
+	if _, ok := uc.LinkForPublicClient(context.Background(), ""); ok {
+		t.Fatal("empty client must not get a signup link")
+	}
+
+	closed := NewIssueRegisterTicket(clients, tickets, stubHasher{}, stubIssuer{url: "https://auth.example"}, frozenClock{t: now}, false)
+	if _, ok := closed.LinkForPublicClient(context.Background(), "mobile"); ok {
+		t.Fatal("closed registration must not get a signup link")
 	}
 }
 

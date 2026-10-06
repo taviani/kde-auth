@@ -31,11 +31,24 @@ func TestLoginTemplateHasNoRegisterLink(t *testing.T) {
 	rec := httptest.NewRecorder()
 	r.HTML(rec, "login.html", PageData{Title: "Sign in"})
 	body := rec.Body.String()
-	if strings.Contains(body, "/register") {
-		t.Fatal("login must not link to register")
+	if strings.Contains(body, "/register") || strings.Contains(body, "Sign up") {
+		t.Fatal("login without a public client must not link to register")
 	}
 	if !strings.Contains(body, "/forgot-password") {
 		t.Fatal("login should still link to forgot-password")
+	}
+}
+
+func TestLoginTemplateSignupLink(t *testing.T) {
+	r, err := New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	r.HTML(rec, "login.html", PageData{Title: "Sign in", RegisterURL: "/register?ticket=abc"})
+	body := rec.Body.String()
+	if !strings.Contains(body, `href="/register?ticket=abc"`) || !strings.Contains(body, "Sign up") {
+		t.Fatalf("missing signup link: %s", body)
 	}
 }
 

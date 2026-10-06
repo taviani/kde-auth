@@ -3,6 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/taviani/kde-auth/internal/adapter/http/render"
@@ -14,24 +15,21 @@ import (
 
 type Login struct {
 	uc           *usecase.Login
+	tickets      *usecase.IssueRegisterTicket
 	limiter      *ratelimit.Limiter
 	render       *render.Renderer
 	turnstileKey string
 	cookieSecure bool
 }
 
-func NewLogin(uc *usecase.Login, limiter *ratelimit.Limiter, render *render.Renderer, turnstileKey string, cookieSecure bool) *Login {
-	return &Login{uc: uc, limiter: limiter, render: render, turnstileKey: turnstileKey, cookieSecure: cookieSecure}
+func NewLogin(uc *usecase.Login, tickets *usecase.IssueRegisterTicket, limiter *ratelimit.Limiter, render *render.Renderer, turnstileKey string, cookieSecure bool) *Login {
+	return &Login{uc: uc, tickets: tickets, limiter: limiter, render: render, turnstileKey: turnstileKey, cookieSecure: cookieSecure}
 }
 
 func (h *Login) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		data := render.PageData{
-			Title:            "Sign in",
-			Next:             r.URL.Query().Get("next"),
-			TurnstileSiteKey: h.turnstileKey,
-		}
+		data := h.page(r, r.URL.Query().Get("next"), "")
 		if r.URL.Query().Get("denied") == "1" {
 			data.Error = response.UserFacingMessage(domain.ErrNoAppAccess) + " Sign in with an invited account."
 		}
@@ -43,6 +41,30 @@ func (h *Login) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *Login) page(r *http.Request, next, email string) render.PageData {
+	data := render.PageData{
+		Title:            "Sign in",
+		Email:            email,
+		Next:             next,
+		TurnstileSiteKey: h.turnstileKey,
+	}
+	if h.tickets == nil {
+		return data
+	}
+	if path, ok := h.tickets.LinkForPublicClient(r.Context(), clientIDFromNext(next)); ok {
+		data.RegisterURL = path
+	}
+	return data
+}
+
+func clientIDFromNext(next string) string {
+	u, err := url.Parse(next)
+	if err != nil || u.IsAbs() || u.Host != "" || u.Path != "/authorize" {
+		return ""
+	}
+	return u.Query().Get("client_id")
+}
+
 func (h *Login) post(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
@@ -50,12 +72,7 @@ func (h *Login) post(w http.ResponseWriter, r *http.Request) {
 	}
 	email := r.FormValue("email")
 	next := r.FormValue("next")
-	data := render.PageData{
-		Title:            "Sign in",
-		Email:            email,
-		Next:             next,
-		TurnstileSiteKey: h.turnstileKey,
-	}
+	data := h.page(r, next, email)
 
 	ipKey := "ip:" + ClientIP(r)
 	emailKey := "email:" + strings.ToLower(strings.TrimSpace(email))

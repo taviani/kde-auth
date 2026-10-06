@@ -116,7 +116,7 @@ func main() {
 	router := httpadapter.NewRouter(cfg, httpadapter.Handlers{
 		Health:         handler.NewHealth(healthUC),
 		Register:       handler.NewRegister(registerUC, issueTicketUC, renderer, cfg.TurnstileSiteKey),
-		Login:          handler.NewLogin(loginUC, loginLimiter, renderer, cfg.TurnstileSiteKey, cfg.CookieSecure),
+		Login:          handler.NewLogin(loginUC, issueTicketUC, loginLimiter, renderer, cfg.TurnstileSiteKey, cfg.CookieSecure),
 		VerifyEmail:    handler.NewVerifyEmail(verifyUC, renderer),
 		Logout:         handler.NewLogout(logoutUC, cfg.CookieSecure),
 		ForgotPassword: handler.NewForgotPassword(forgotUC, renderer, cfg.TurnstileSiteKey),
