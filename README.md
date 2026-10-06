@@ -24,7 +24,7 @@ internal/adapter/     http, postgres, crypto, mail
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Liveness |
-| GET | `/.well-known/openid-configuration` | OIDC discovery |
+| GET | `/.well-known/openid-configuration` | OIDC discovery (honest: no `id_token` advertised) |
 | GET | `/jwks` | Public signing keys |
 | POST | `/register/ticket` | Confidential client (`client_id` + `client_secret`) mints a one-time registration ticket |
 | GET/POST | `/register` | Create account with a one-time `ticket` (from `/register/ticket` or login **Sign up**). Bare URL, closed registration (`REGISTRATION_OPEN=false`), invalid/expired ticket, or invite-only client → 404 |
@@ -48,6 +48,8 @@ Public (mobile) clients use `token_endpoint_auth_method=none` and **must** send 
 Invite-only apps never use `/register` — issue an invite in admin instead. A ticket whose client was switched to `invite_only` is also rejected at `/register`.
 
 Supported scopes: `openid` (required), `email`, `offline_access` (native apps that store a refresh token).
+
+Identity for first-party clients: **access JWT** (RS256) and `GET /userinfo`. The issuer does **not** emit an `id_token`; discovery does not advertise ID Token support.
 
 ## Development
 

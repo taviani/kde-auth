@@ -368,7 +368,6 @@ func (uc *OIDCMetadata) Execute() map[string]any {
 		"response_types_supported":              []string{"code"},
 		"grant_types_supported":                 []string{"authorization_code", "refresh_token"},
 		"subject_types_supported":               []string{"public"},
-		"id_token_signing_alg_values_supported": []string{"RS256"},
 		"scopes_supported": []string{
 			domain.ScopeOpenID,
 			domain.ScopeEmail,
