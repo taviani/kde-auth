@@ -27,28 +27,23 @@ internal/adapter/     http, postgres, crypto, mail
 | GET | `/.well-known/openid-configuration` | OIDC discovery |
 | GET | `/jwks` | Public signing keys |
 | POST | `/register/ticket` | Confidential client (`client_id` + `client_secret`) mints a one-time registration ticket |
-| GET/POST | `/register` | Create account (**requires** `ticket`; otherwise 404) |
+| GET/POST | `/register` | Create account with a one-time `ticket` (from `/register/ticket` or login **Sign up**). Missing or invalid ticket → 404 |
 | GET | `/verify-email?token=` | Confirm email |
 | GET/POST | `/login` | Sign in (session cookie). Rate-limited. A public client that is not invite-only gets a Sign up link; invite-only and confidential clients do not. |
 | POST | `/logout` | End session |
 | GET | `/authorize` | OAuth2 authorization code (supports PKCE `S256`) |
 | POST | `/token` | Exchange code / refresh token |
+| GET | `/userinfo` | Profile from Bearer JWT |
+| POST | `/account/password` | Change password (Bearer JWT; body: `current_password`, `new_password`, `new_password_confirm`) |
 | GET | `/invite` | Accept an invite (invite-only apps) |
 
 `GET /` is **404**. `/admin` is **404** unless the session is an admin (no login redirect).
 
-Public (mobile) clients use `token_endpoint_auth_method=none` and **must** send PKCE (`code_challenge` / `code_verifier`). They cannot mint registration tickets. Confidential clients keep `client_secret_post` (PKCE optional) and may mint tickets only when `access_mode=public`.
+Public (mobile) clients use `token_endpoint_auth_method=none` and **must** send PKCE (`code_challenge` / `code_verifier`). They cannot call `/register/ticket`; registration is via the login **Sign up** link (issuer-minted ticket). Confidential clients keep `client_secret_post` (PKCE optional) and may mint tickets via `/register/ticket` when `access_mode=public`.
 
 Invite-only apps never use `/register` — issue an invite in admin instead.
 
 Supported scopes: `openid` (required), `email`, `offline_access` (native apps that store a refresh token).
-
-Public (mobile) clients use `token_endpoint_auth_method=none` and **must** send PKCE (`code_challenge` / `code_verifier`). Confidential clients keep `client_secret_post` (PKCE optional).
-
-Supported scopes: `openid` (required), `email`, `offline_access` (native apps that store a refresh token).
-
-| GET | `/userinfo` | Profile from Bearer JWT |
-| POST | `/account/password` | Change password (Bearer JWT; body: `current_password`, `new_password`, `new_password_confirm`) |
 
 ## Development
 
