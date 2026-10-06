@@ -279,12 +279,18 @@ func (uc *RegisterUser) Execute(ctx context.Context, in RegisterInput) error {
 
 type VerifyEmail struct {
 	users  port.UserRepository
+	emails port.UserEmailRepository
 	tokens port.TokenRepository
 	clock  port.Clock
 }
 
-func NewVerifyEmail(users port.UserRepository, tokens port.TokenRepository, clock port.Clock) *VerifyEmail {
-	return &VerifyEmail{users: users, tokens: tokens, clock: clock}
+func NewVerifyEmail(
+	users port.UserRepository,
+	emails port.UserEmailRepository,
+	tokens port.TokenRepository,
+	clock port.Clock,
+) *VerifyEmail {
+	return &VerifyEmail{users: users, emails: emails, tokens: tokens, clock: clock}
 }
 
 func (uc *VerifyEmail) Execute(ctx context.Context, rawToken string) error {
@@ -298,6 +304,15 @@ func (uc *VerifyEmail) Execute(ctx context.Context, rawToken string) error {
 			return domain.ErrInvalidToken
 		}
 		return err
+	}
+	if token.Email != "" {
+		if err := uc.emails.MarkVerified(ctx, token.UserID, token.Email, now); err != nil {
+			if errors.Is(err, domain.ErrNotFound) {
+				return domain.ErrInvalidToken
+			}
+			return err
+		}
+		return nil
 	}
 	return uc.users.MarkEmailVerified(ctx, token.UserID, now)
 }

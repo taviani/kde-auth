@@ -29,6 +29,7 @@ type RefreshToken struct {
 type EmailVerificationToken struct {
 	Token     string
 	UserID    UserID
+	Email     Email // empty = signup verify for primary; set = verify that secondary address
 	ExpiresAt time.Time
 }
 

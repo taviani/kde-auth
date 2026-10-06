@@ -19,6 +19,7 @@ type Handlers struct {
 	ForgotPassword *handler.ForgotPassword
 	ResetPassword  *handler.ResetPassword
 	ChangePassword *handler.ChangePassword
+	AccountEmails  *handler.AccountEmails
 	Invite         *handler.Invite
 	Authorize      *handler.Authorize
 	Token          *handler.Token
@@ -53,6 +54,12 @@ func NewRouter(cfg config.Config, h Handlers) http.Handler {
 	r.Post("/reset-password", h.ResetPassword.ServeHTTP)
 	if h.ChangePassword != nil {
 		r.Post("/account/password", h.ChangePassword.ServeHTTP)
+	}
+	if h.AccountEmails != nil {
+		r.Get("/account/emails", h.AccountEmails.List)
+		r.Post("/account/emails", h.AccountEmails.Add)
+		r.Delete("/account/emails", h.AccountEmails.Delete)
+		r.Post("/account/emails/cancel", h.AccountEmails.Cancel)
 	}
 	if h.Invite != nil {
 		r.Get("/invite", h.Invite.ServeHTTP)

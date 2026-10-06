@@ -35,6 +35,10 @@ internal/adapter/     http, postgres, crypto, mail
 | POST | `/token` | Exchange code / refresh token |
 | GET | `/userinfo` | Profile from Bearer JWT |
 | POST | `/account/password` | Change password (Bearer JWT; body: `current_password`, `new_password`, `new_password_confirm`) |
+| GET | `/account/emails` | List account emails (Bearer JWT; primary/secondary, verified or pending) |
+| POST | `/account/emails` | Add secondary/recovery email (Bearer JWT; body: `email`, captcha; sends verification mail) |
+| POST | `/account/emails/cancel` | Cancel pending secondary email (Bearer JWT) |
+| DELETE | `/account/emails` | Delete a verified email if another verified remains (Bearer JWT; body: `email`) |
 | GET | `/invite` | Accept an invite (invite-only apps) |
 
 `GET /` is **404**. `/admin` is **404** unless the session is an admin (no login redirect).

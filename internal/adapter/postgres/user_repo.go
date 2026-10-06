@@ -21,8 +21,14 @@ func NewUserRepo(pool *pgxpool.Pool) *UserRepo {
 }
 
 func (r *UserRepo) Create(ctx context.Context, user domain.User) (domain.UserID, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback(ctx)
+
 	var id domain.UserID
-	err := r.pool.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		INSERT INTO users (email, password_hash, role, status, email_verified_at, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id
@@ -35,12 +41,28 @@ func (r *UserRepo) Create(ctx context.Context, user domain.User) (domain.UserID,
 		user.CreatedAt,
 		user.UpdatedAt,
 	).Scan(&id)
-	return id, err
+	if err != nil {
+		return "", err
+	}
+
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO user_emails (user_id, email, role, verified_at, created_at, updated_at)
+		VALUES ($1, $2, 'primary', $3, $4, $5)
+	`, id, user.Email.String(), user.EmailVerifiedAt, user.CreatedAt, user.UpdatedAt); err != nil {
+		return "", err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return "", err
+	}
+	return id, nil
 }
 
 const selectUserByEmailSQL = `
-SELECT id, email, password_hash, role, status, email_verified_at, created_at, updated_at
-FROM users WHERE lower(email) = lower($1)
+SELECT u.id, u.email, u.password_hash, u.role, u.status, u.email_verified_at, u.created_at, u.updated_at
+FROM users u
+INNER JOIN user_emails ue ON ue.user_id = u.id
+WHERE lower(ue.email) = lower($1) AND ue.verified_at IS NOT NULL
 `
 
 func (r *UserRepo) ByEmail(ctx context.Context, email domain.Email) (domain.User, error) {
@@ -59,7 +81,13 @@ func (r *UserRepo) ByID(ctx context.Context, id domain.UserID) (domain.User, err
 }
 
 func (r *UserRepo) MarkEmailVerified(ctx context.Context, id domain.UserID, at time.Time) error {
-	tag, err := r.pool.Exec(ctx, `
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	tag, err := tx.Exec(ctx, `
 		UPDATE users
 		SET status = $2, email_verified_at = $3, updated_at = $3
 		WHERE id = $1
@@ -70,7 +98,16 @@ func (r *UserRepo) MarkEmailVerified(ctx context.Context, id domain.UserID, at t
 	if tag.RowsAffected() == 0 {
 		return domain.ErrNotFound
 	}
-	return nil
+
+	if _, err := tx.Exec(ctx, `
+		UPDATE user_emails
+		SET verified_at = $2, updated_at = $2
+		WHERE user_id = $1 AND role = 'primary' AND verified_at IS NULL
+	`, id, at); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *UserRepo) UpdatePassword(ctx context.Context, id domain.UserID, hash domain.PasswordHash, at time.Time) error {
@@ -88,7 +125,9 @@ func (r *UserRepo) UpdatePassword(ctx context.Context, id domain.UserID, hash do
 
 func (r *UserRepo) ExistsByEmail(ctx context.Context, email domain.Email) (bool, error) {
 	var exists bool
-	err := r.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE lower(email) = lower($1))`, email.String()).Scan(&exists)
+	err := r.pool.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM user_emails WHERE lower(email) = lower($1))
+	`, email.String()).Scan(&exists)
 	return exists, err
 }
 

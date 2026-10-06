@@ -33,6 +33,9 @@ func WriteError(w http.ResponseWriter, err error) {
 		WriteJSON(w, http.StatusBadRequest, oauthError("invalid_grant", err.Error()))
 	case errors.Is(err, domain.ErrEmailTaken):
 		WriteJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+	case errors.Is(err, domain.ErrEmailLimitReached),
+		errors.Is(err, domain.ErrCannotDeleteLastEmail):
+		WriteJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
 	case errors.Is(err, domain.ErrRegistrationClosed),
 		errors.Is(err, domain.ErrInviteOnlyRegistration):
 		WriteJSON(w, http.StatusForbidden, map[string]string{"error": err.Error()})
@@ -58,6 +61,10 @@ func UserFacingMessage(err error) string {
 		return "Invalid email or password."
 	case errors.Is(err, domain.ErrEmailTaken):
 		return "An account with this email already exists."
+	case errors.Is(err, domain.ErrEmailLimitReached):
+		return "You already have a secondary email."
+	case errors.Is(err, domain.ErrCannotDeleteLastEmail):
+		return "You cannot delete your last verified email."
 	case errors.Is(err, domain.ErrRegistrationClosed):
 		return "Registration is currently closed."
 	case errors.Is(err, domain.ErrInviteOnlyRegistration):

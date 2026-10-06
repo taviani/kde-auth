@@ -51,6 +51,7 @@ func main() {
 	}
 
 	userRepo := postgres.NewUserRepo(pool)
+	userEmailRepo := postgres.NewUserEmailRepo(pool)
 	userAdminRepo := postgres.NewUserAdminRepo(pool)
 	appAccessRepo := postgres.NewAppAccessRepo(pool)
 	clientRepo := postgres.NewClientRepo(pool)
@@ -87,9 +88,10 @@ func main() {
 	healthUC := usecase.NewHealth(healthChecker)
 	issueTicketUC := usecase.NewIssueRegisterTicket(clientRepo, ticketRepo, hasher, issuer, sysClock, cfg.RegistrationOpen)
 	registerUC := usecase.NewRegisterUser(userRepo, clientRepo, ticketRepo, appAccessRepo, hasher, tokenRepo, mailer, captcha, sysClock, issuer, cfg.RegistrationOpen)
-	verifyUC := usecase.NewVerifyEmail(userRepo, tokenRepo, sysClock)
+	verifyUC := usecase.NewVerifyEmail(userRepo, userEmailRepo, tokenRepo, sysClock)
 	loginUC := usecase.NewLogin(userRepo, sessionRepo, hasher, captcha, sysClock, sessionTTL)
 	loginLimiter := ratelimit.New(5, 15*time.Minute)
+	emailAddLimiter := ratelimit.New(5, 15*time.Minute)
 	logoutUC := usecase.NewLogout(sessionRepo, sysClock)
 	resolveSessionUC := usecase.NewResolveSession(sessionRepo, userRepo, sysClock)
 	recordAccessUC := usecase.NewRecordAppAccess(appAccessRepo, sysClock)
@@ -106,6 +108,7 @@ func main() {
 	forgotUC := usecase.NewRequestPasswordReset(userRepo, tokenRepo, mailer, captcha, sysClock, issuer)
 	resetUC := usecase.NewResetPassword(userRepo, tokenRepo, sessionRepo, hasher, sysClock)
 	changePasswordUC := usecase.NewChangePassword(userRepo, sessionRepo, hasher, sysClock)
+	accountEmailsUC := usecase.NewAccountEmails(userRepo, userEmailRepo, tokenRepo, mailer, captcha, sysClock, issuer)
 
 	renderer, err := render.New()
 	if err != nil {
@@ -122,6 +125,7 @@ func main() {
 		ForgotPassword: handler.NewForgotPassword(forgotUC, renderer, cfg.TurnstileSiteKey),
 		ResetPassword:  handler.NewResetPassword(resetUC, renderer),
 		ChangePassword: handler.NewChangePassword(changePasswordUC, issuer),
+		AccountEmails:  handler.NewAccountEmails(accountEmailsUC, issuer, emailAddLimiter),
 		Invite:         handler.NewInvite(acceptInviteUC, renderer, cfg.TurnstileSiteKey),
 		Authorize:      handler.NewAuthorize(authorizeUC, logoutUC, renderer, cfg.CookieSecure),
 		Token:          handler.NewToken(tokenUC),
