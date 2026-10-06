@@ -11,6 +11,7 @@ import (
 type ChangePassword struct {
 	users    port.UserRepository
 	sessions port.SessionRepository
+	tokens   port.TokenRepository
 	hasher   port.PasswordHasher
 	clock    port.Clock
 }
@@ -18,17 +19,18 @@ type ChangePassword struct {
 func NewChangePassword(
 	users port.UserRepository,
 	sessions port.SessionRepository,
+	tokens port.TokenRepository,
 	hasher port.PasswordHasher,
 	clock port.Clock,
 ) *ChangePassword {
-	return &ChangePassword{users: users, sessions: sessions, hasher: hasher, clock: clock}
+	return &ChangePassword{users: users, sessions: sessions, tokens: tokens, hasher: hasher, clock: clock}
 }
 
 type ChangePasswordInput struct {
-	UserID              domain.UserID
-	CurrentPassword     string
-	NewPassword         string
-	NewPasswordConfirm  string
+	UserID             domain.UserID
+	CurrentPassword    string
+	NewPassword        string
+	NewPasswordConfirm string
 }
 
 func (uc *ChangePassword) Execute(ctx context.Context, in ChangePasswordInput) error {
@@ -68,5 +70,8 @@ func (uc *ChangePassword) Execute(ctx context.Context, in ChangePasswordInput) e
 	if err := uc.users.UpdatePassword(ctx, user.ID, hash, now); err != nil {
 		return err
 	}
-	return uc.sessions.RevokeAllForUser(ctx, user.ID, now)
+	if err := uc.sessions.RevokeAllForUser(ctx, user.ID, now); err != nil {
+		return err
+	}
+	return uc.tokens.RevokeAllRefreshTokensForUser(ctx, user.ID, now)
 }

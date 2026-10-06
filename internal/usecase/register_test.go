@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/taviani/kde-auth/internal/adapter/crypto"
 	"github.com/taviani/kde-auth/internal/domain"
 	"github.com/taviani/kde-auth/internal/port"
 )
@@ -36,7 +37,9 @@ func (stubIssuer) ParseAccessToken(context.Context, string) (port.AccessClaims, 
 }
 func (stubIssuer) JWKS(context.Context) (map[string]any, error) { return nil, nil }
 
-type memClients struct{ byID map[domain.ClientID]domain.OAuthClient }
+type memClients struct {
+	byID map[domain.ClientID]domain.OAuthClient
+}
 
 func (m *memClients) ByClientID(_ context.Context, id domain.ClientID) (domain.OAuthClient, error) {
 	c, ok := m.byID[id]
@@ -358,12 +361,109 @@ func TestAdminRevokeSessions(t *testing.T) {
 	}
 }
 
-func TestAdminDeleteRejectsSelfAndAdmins(t *testing.T) {
+func TestAdminSuspendRevokesSessionsAndRefresh(t *testing.T) {
 	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
 	repo := &memAdminUsers{byID: map[domain.UserID]domain.User{
 		"admin": {ID: "admin", Role: domain.RoleAdmin, Email: "admin@example.com"},
+		"user":  {ID: "user", Role: domain.RoleUser, Status: domain.UserStatusActive, Email: "u@example.com"},
+	}}
+	sessions := &trackingSessions{}
+	tokens := &trackingRefreshTokens{}
+	uc := NewAdminUsers(repo, sessions, tokens, frozenClock{t: now})
+	actor := repo.byID["admin"]
+
+	if err := uc.SetStatus(context.Background(), actor, "user", domain.UserStatusSuspended); err != nil {
+		t.Fatal(err)
+	}
+	if repo.byID["user"].Status != domain.UserStatusSuspended {
+		t.Fatal("status not updated")
+	}
+	if len(sessions.revoked) != 1 || sessions.revoked[0] != "user" {
+		t.Fatalf("sessions: %+v", sessions.revoked)
+	}
+	if len(tokens.revoked) != 1 || tokens.revoked[0] != "user" {
+		t.Fatalf("refresh: %+v", tokens.revoked)
+	}
+
+	sessions.revoked = nil
+	tokens.revoked = nil
+	if err := uc.SetStatus(context.Background(), actor, "user", domain.UserStatusActive); err != nil {
+		t.Fatal(err)
+	}
+	if len(sessions.revoked) != 0 || len(tokens.revoked) != 0 {
+		t.Fatalf("reactivate must not revoke: sessions=%v tokens=%v", sessions.revoked, tokens.revoked)
+	}
+}
+
+func TestChangePasswordRevokesSessionsAndRefresh(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	verified := now
+	users := &passwordUsers{byID: map[domain.UserID]domain.User{
+		"user": {
+			ID:              "user",
+			Email:           "u@example.com",
+			PasswordHash:    "h:oldpassword12",
+			Role:            domain.RoleUser,
+			Status:          domain.UserStatusActive,
+			EmailVerifiedAt: &verified,
+		},
+	}}
+	sessions := &trackingSessions{}
+	tokens := &trackingRefreshTokens{}
+	uc := NewChangePassword(users, sessions, tokens, stubHasher{}, frozenClock{t: now})
+
+	if err := uc.Execute(context.Background(), ChangePasswordInput{
+		UserID:             "user",
+		CurrentPassword:    "oldpassword12",
+		NewPassword:        "newpassword12",
+		NewPasswordConfirm: "newpassword12",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if users.byID["user"].PasswordHash != "h:newpassword12" {
+		t.Fatalf("hash: %s", users.byID["user"].PasswordHash)
+	}
+	if len(sessions.revoked) != 1 || sessions.revoked[0] != "user" {
+		t.Fatalf("sessions: %+v", sessions.revoked)
+	}
+	if len(tokens.revoked) != 1 || tokens.revoked[0] != "user" {
+		t.Fatalf("refresh: %+v", tokens.revoked)
+	}
+}
+
+func TestResetPasswordRevokesSessionsAndRefresh(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	users := &passwordUsers{byID: map[domain.UserID]domain.User{
+		"user": {ID: "user", PasswordHash: "h:oldpassword12", Status: domain.UserStatusActive},
+	}}
+	sessions := &trackingSessions{}
+	raw := "reset-raw-token"
+	tokens := &trackingRefreshTokens{resetByHash: map[string]domain.PasswordResetToken{
+		crypto.HashToken(raw): {UserID: "user", ExpiresAt: now.Add(time.Hour)},
+	}}
+	uc := NewResetPassword(users, tokens, sessions, stubHasher{}, frozenClock{t: now})
+
+	if err := uc.Execute(context.Background(), ResetPasswordInput{
+		Token:           raw,
+		Password:        "newpassword12",
+		PasswordConfirm: "newpassword12",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(sessions.revoked) != 1 || sessions.revoked[0] != "user" {
+		t.Fatalf("sessions: %+v", sessions.revoked)
+	}
+	if len(tokens.revoked) != 1 || tokens.revoked[0] != "user" {
+		t.Fatalf("refresh: %+v", tokens.revoked)
+	}
+}
+
+func TestAdminDeleteRejectsSelfAndAdmins(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	repo := &memAdminUsers{byID: map[domain.UserID]domain.User{
+		"admin":       {ID: "admin", Role: domain.RoleAdmin, Email: "admin@example.com"},
 		"other-admin": {ID: "other-admin", Role: domain.RoleAdmin, Email: "a2@example.com"},
-		"user":  {ID: "user", Role: domain.RoleUser, Email: "u@example.com"},
+		"user":        {ID: "user", Role: domain.RoleUser, Email: "u@example.com"},
 	}}
 	uc := NewAdminUsers(repo, memSessions{}, memTokens{}, frozenClock{t: now})
 	actor := repo.byID["admin"]
@@ -399,7 +499,13 @@ func (m *memAdminUsers) ByID(_ context.Context, id domain.UserID) (domain.User, 
 	}
 	return u, nil
 }
-func (m *memAdminUsers) SetStatus(context.Context, domain.UserID, domain.UserStatus, time.Time) error {
+func (m *memAdminUsers) SetStatus(_ context.Context, id domain.UserID, status domain.UserStatus, _ time.Time) error {
+	u, ok := m.byID[id]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	u.Status = status
+	m.byID[id] = u
 	return nil
 }
 func (m *memAdminUsers) Delete(_ context.Context, id domain.UserID) error {
@@ -442,7 +548,9 @@ func (m *trackingSessions) RevokeAllForUser(_ context.Context, userID domain.Use
 }
 
 type trackingRefreshTokens struct {
-	revoked []domain.UserID
+	revoked     []domain.UserID
+	resetByHash map[string]domain.PasswordResetToken
+	resetRaw    string
 }
 
 func (m *trackingRefreshTokens) CreateAuthorizationCode(context.Context, domain.AuthorizationCode, string) error {
@@ -457,7 +565,9 @@ func (m *trackingRefreshTokens) CreateRefreshToken(context.Context, domain.Refre
 func (m *trackingRefreshTokens) ConsumeRefreshToken(context.Context, string, time.Time) (domain.RefreshToken, error) {
 	return domain.RefreshToken{}, domain.ErrNotFound
 }
-func (m *trackingRefreshTokens) RevokeRefreshToken(context.Context, string, time.Time) error { return nil }
+func (m *trackingRefreshTokens) RevokeRefreshToken(context.Context, string, time.Time) error {
+	return nil
+}
 func (m *trackingRefreshTokens) RevokeAllRefreshTokensForUser(_ context.Context, userID domain.UserID, _ time.Time) error {
 	m.revoked = append(m.revoked, userID)
 	return nil
@@ -471,6 +581,48 @@ func (m *trackingRefreshTokens) ConsumeEmailVerificationToken(context.Context, s
 func (m *trackingRefreshTokens) CreatePasswordResetToken(context.Context, domain.PasswordResetToken, string) error {
 	return nil
 }
-func (m *trackingRefreshTokens) ConsumePasswordResetToken(context.Context, string, time.Time) (domain.PasswordResetToken, error) {
-	return domain.PasswordResetToken{}, domain.ErrNotFound
+func (m *trackingRefreshTokens) ConsumePasswordResetToken(_ context.Context, tokenHash string, at time.Time) (domain.PasswordResetToken, error) {
+	t, ok := m.resetByHash[tokenHash]
+	if !ok {
+		return domain.PasswordResetToken{}, domain.ErrNotFound
+	}
+	if !at.Before(t.ExpiresAt) {
+		return domain.PasswordResetToken{}, domain.ErrInvalidToken
+	}
+	delete(m.resetByHash, tokenHash)
+	return t, nil
+}
+
+type passwordUsers struct {
+	byID map[domain.UserID]domain.User
+}
+
+func (m *passwordUsers) Create(context.Context, domain.User) (domain.UserID, error) {
+	return "", domain.ErrNotFound
+}
+func (m *passwordUsers) ByEmail(context.Context, domain.Email) (domain.User, error) {
+	return domain.User{}, domain.ErrNotFound
+}
+func (m *passwordUsers) ByID(_ context.Context, id domain.UserID) (domain.User, error) {
+	u, ok := m.byID[id]
+	if !ok {
+		return domain.User{}, domain.ErrNotFound
+	}
+	return u, nil
+}
+func (m *passwordUsers) MarkEmailVerified(context.Context, domain.UserID, time.Time) error {
+	return nil
+}
+func (m *passwordUsers) UpdatePassword(_ context.Context, id domain.UserID, hash domain.PasswordHash, at time.Time) error {
+	u, ok := m.byID[id]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	u.PasswordHash = hash
+	u.UpdatedAt = at
+	m.byID[id] = u
+	return nil
+}
+func (m *passwordUsers) ExistsByEmail(context.Context, domain.Email) (bool, error) {
+	return false, nil
 }

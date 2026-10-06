@@ -129,7 +129,10 @@ func (uc *ResetPassword) Execute(ctx context.Context, in ResetPasswordInput) err
 	if err := uc.users.UpdatePassword(ctx, token.UserID, hash, now); err != nil {
 		return err
 	}
-	return uc.sessions.RevokeAllForUser(ctx, token.UserID, now)
+	if err := uc.sessions.RevokeAllForUser(ctx, token.UserID, now); err != nil {
+		return err
+	}
+	return uc.tokens.RevokeAllRefreshTokensForUser(ctx, token.UserID, now)
 }
 
 type AdminClients struct {

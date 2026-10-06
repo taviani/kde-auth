@@ -107,7 +107,7 @@ func main() {
 	)
 	forgotUC := usecase.NewRequestPasswordReset(userRepo, tokenRepo, mailer, captcha, sysClock, issuer)
 	resetUC := usecase.NewResetPassword(userRepo, tokenRepo, sessionRepo, hasher, sysClock)
-	changePasswordUC := usecase.NewChangePassword(userRepo, sessionRepo, hasher, sysClock)
+	changePasswordUC := usecase.NewChangePassword(userRepo, sessionRepo, tokenRepo, hasher, sysClock)
 	accountEmailsUC := usecase.NewAccountEmails(userRepo, userEmailRepo, tokenRepo, mailer, captcha, sysClock, issuer)
 
 	renderer, err := render.New()

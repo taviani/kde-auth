@@ -93,7 +93,17 @@ func (uc *AdminUsers) SetStatus(ctx context.Context, actor domain.User, id domai
 	if actor.ID == id && status == domain.UserStatusSuspended {
 		return domain.ValidationError{Field: "status", Message: "cannot suspend your own account"}
 	}
-	return uc.users.SetStatus(ctx, id, status, uc.clock.Now())
+	now := uc.clock.Now()
+	if err := uc.users.SetStatus(ctx, id, status, now); err != nil {
+		return err
+	}
+	if status != domain.UserStatusSuspended {
+		return nil
+	}
+	if err := uc.sessions.RevokeAllForUser(ctx, id, now); err != nil {
+		return err
+	}
+	return uc.tokens.RevokeAllRefreshTokensForUser(ctx, id, now)
 }
 
 func (uc *AdminUsers) Delete(ctx context.Context, actor domain.User, id domain.UserID) error {
