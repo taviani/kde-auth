@@ -47,7 +47,7 @@ Public (mobile) clients use `token_endpoint_auth_method=none` and **must** send 
 
 Invite-only apps never use `/register` — issue an invite in admin instead. A ticket whose client was switched to `invite_only` is also rejected at `/register`.
 
-Supported scopes: `openid` (required), `email`, `offline_access` (native apps that store a refresh token).
+Supported scopes: `openid` (required), `email`, `offline_access` (required to receive a **refresh token**; native apps that store a refresh must request it).
 
 Identity for first-party clients: **access JWT** (RS256) and `GET /userinfo`. The issuer does **not** emit an `id_token`; discovery does not advertise ID Token support.
 

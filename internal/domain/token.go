@@ -23,6 +23,7 @@ type RefreshToken struct {
 	Token     string
 	UserID    UserID
 	ClientID  ClientID
+	Scope     string
 	ExpiresAt time.Time
 }
 

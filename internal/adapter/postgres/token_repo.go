@@ -83,9 +83,9 @@ func nullIfEmpty(s string) any {
 
 func (r *TokenRepo) CreateRefreshToken(ctx context.Context, token domain.RefreshToken, tokenHash string) error {
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO refresh_tokens (token_hash, user_id, client_id, expires_at)
-		VALUES ($1, $2, $3, $4)
-	`, tokenHash, token.UserID, token.ClientID, token.ExpiresAt)
+		INSERT INTO refresh_tokens (token_hash, user_id, client_id, scope, expires_at)
+		VALUES ($1, $2, $3, $4, $5)
+	`, tokenHash, token.UserID, token.ClientID, token.Scope, token.ExpiresAt)
 	return err
 }
 
@@ -97,7 +97,7 @@ func (r *TokenRepo) ConsumeRefreshToken(ctx context.Context, tokenHash string, a
 	defer tx.Rollback(ctx)
 
 	row := tx.QueryRow(ctx, `
-		SELECT user_id, client_id, expires_at, revoked_at
+		SELECT user_id, client_id, scope, expires_at, revoked_at
 		FROM refresh_tokens
 		WHERE token_hash = $1
 		FOR UPDATE
@@ -105,7 +105,7 @@ func (r *TokenRepo) ConsumeRefreshToken(ctx context.Context, tokenHash string, a
 
 	var t domain.RefreshToken
 	var revokedAt *time.Time
-	err = row.Scan(&t.UserID, &t.ClientID, &t.ExpiresAt, &revokedAt)
+	err = row.Scan(&t.UserID, &t.ClientID, &t.Scope, &t.ExpiresAt, &revokedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.RefreshToken{}, domain.ErrNotFound
 	}
