@@ -6,7 +6,7 @@ Source de vérité. On n’implémente une tranche qu’une fois cette spec vali
 
 ## Produit
 
-Un refresh token n’est émis **que** si le scope de l’autorisation inclut `offline_access`. Sinon, la réponse `/token` contient access token (+ éventuellement id_token selon autre spec) **sans** refresh. Les apps natives qui ont besoin d’une session longue demandent explicitement `offline_access`.
+Un refresh token n’est émis **que** si le scope de l’autorisation inclut `offline_access`. Sinon, la réponse `/token` contient un access token **sans** refresh. Les apps natives qui ont besoin d’une session longue demandent explicitement `offline_access`.
 
 Le scope accordé est **persisté** avec le refresh et renvoyé à l’identique (ou en sous-ensemble cohérent) lors des renouvellements.
 

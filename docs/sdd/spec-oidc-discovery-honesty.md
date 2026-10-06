@@ -1,64 +1,53 @@
-# kde-auth — honnêteté discovery OIDC / id_token
+# kde-auth — honnêteté discovery OIDC (pas d’id_token annoncé)
 
 Source de vérité. On n’implémente une tranche qu’une fois cette spec validée, et seulement cette tranche.
 
-**Priorité :** cassé / menteur. Le document `/.well-known/openid-configuration` annonce `id_token_signing_alg_values_supported` (RS256) alors que la réponse `/token` **n’émet jamais** d’`id_token`. Les claims d’identité (`email`, `email_verified`, `role`) vivent aujourd’hui dans l’**access token**.
+**Priorité :** cassé / menteur. Le document `/.well-known/openid-configuration` annonce `id_token_signing_alg_values_supported` (RS256) alors que la réponse `/token` **n’émet jamais** d’`id_token`. Les claims d’identité (`email`, `email_verified`, `role`) vivent dans l’**access token** et `/userinfo`.
+
+**Décision produit (verrouillée) : option A — discovery honnête.** On ne devient pas un IdP OIDC Core pour l’instant : tous les clients sont first-party et consomment déjà access JWT + userinfo. Émettre un vrai `id_token` (option B) est reporté ; ce n’est pas requis tant qu’aucun RP tiers / lib strict OIDC n’est au programme.
 
 ## Produit
 
-L’issuer doit être **honnête** envers les clients qui lisent le discovery : soit il se comporte en fournisseur OIDC Core minimal (émet un `id_token`), soit le discovery ne prétend plus supporter les ID Tokens.
+L’issuer dit la vérité dans le discovery : **pas de signal de support ID Token** tant qu’aucun `id_token` n’est émis. Le profil reste : access token RS256 + `GET /userinfo`.
 
-Deux options produit (en choisir **une** à la validation de cette spec, avant le plan d’implémentation) :
+Les clients first-party (Portclos, Instacrane, etc.) ne changent pas.
 
-| Option | Effet |
-|--------|--------|
-| **A — Honest discovery** | Retirer du discovery tout signal d’ID Token ; documenter que l’identité est dans l’access JWT + `/userinfo`. Suffisant tant que tous les clients sont first-party et déjà adaptés. |
-| **B — ID Token réel** | Émettre `id_token` (RS256) sur `/token` quand `openid` est dans le scope ; echo `nonce` si fourni à `/authorize` ; claims minimales `iss`, `sub`, `aud`, `exp`, `iat` (+ email si scope `email`). |
+## Processus
 
-**Recommandation d’audit (défaut proposé) :** option **A** d’abord (correctif rapide, truthful), puis option **B** en feature ultérieure si un client tiers / standard OIDC le exige. Si on choisit **B** tout de suite, cette spec devient la tranche « émettre id_token » et A disparaît.
-
-## Processus (si option A)
-
-1. Mettre à jour le metadata discovery pour ne plus annoncer le support ID Token.
-2. README / docs internes : access token + userinfo = profil.
-3. Aucun changement de réponse `/token` pour les clients existants.
-
-## Processus (si option B)
-
-1. `/authorize` accepte un paramètre optionnel `nonce` et le stocke sur le code d’autorisation.
-2. `/token` (authorization_code et, si pertinent, refresh selon règles OIDC retenues) inclut `id_token` signé RS256.
-3. Discovery conserve / précise les champs ID Token de façon exacte (`claims_supported` minimal si on les ajoute).
-4. Les clients first-party peuvent ignorer `id_token` et continuer à lire l’access token.
+1. Retirer du metadata discovery les champs qui annoncent un ID Token (notamment `id_token_signing_alg_values_supported`).
+2. Aligner README / docs : identité = access JWT + userinfo ; pas d’`id_token`.
+3. Aucun changement de réponse `/token` (toujours sans `id_token`).
 
 ## Règles
 
 - Ne jamais annoncer une capacité absente.
-- `openid` reste obligatoire dans le scope (déjà le cas).
-- Pas de `prompt`, `max_age`, `auth_time` dans la première tranche ID Token (hors scope B v1).
-- L’access token peut continuer à porter email/role (compat first-party) ; ce n’est pas un substitut documenté d’`id_token` si B est choisi.
+- `openid` reste obligatoire dans le scope (déjà le cas) — même sans `id_token`, le scope reste le marqueur OAuth/OIDC « login » pour nos clients.
+- L’access token peut continuer à porter email / email_verified / role (compat first-party).
+- Toute future tranche « vrai id_token » = **nouvelle** SDD, pas un glissement silencieux de celle-ci.
 
 ## API (issuer)
 
-| Surface | Option A | Option B |
-|---------|----------|----------|
-| `GET /.well-known/openid-configuration` | sans `id_token_signing_alg_values_supported` (et sans autres champs ID Token inventés) | aligné sur ce qui est vraiment émis |
-| `POST /token` | inchangé | + `id_token` string JWT |
-| `GET /authorize` | inchangé | + `nonce` optionnel mémorisé |
+| Surface | Attendu |
+|---------|---------|
+| `GET /.well-known/openid-configuration` | sans `id_token_signing_alg_values_supported` (ni autres champs ID Token inventés) |
+| `POST /token` | inchangé (pas d’`id_token`) |
+| `GET /userinfo` | inchangé |
 
 ## Clients
 
-- Portclos / Instacrane : aucun changement obligatoire si A ; si B, peuvent ignorer `id_token`.
-- Tout client strict OIDC : A les force à userinfo/access ; B les débloque.
+Aucun changement obligatoire. Ils continuent d’utiliser access token / userinfo.
 
 ## Hors scope (cette version)
 
-- `prompt=login` / `max_age` / `auth_time`.
+- Émettre un `id_token` / `nonce` / `auth_time`.
+- `prompt`, `max_age`.
 - Rotation de clés JWKS.
-- Claims custom hors email / email_verified / role déjà présents côté access.
-- `/revoke` et `end_session` (autre spec).
+- `/revoke` et `end_session` (voir [spec-token-revoke-and-logout.md](spec-token-revoke-and-logout.md)).
 
 ## Critères d’acceptation
 
-- Après la tranche, un client qui lit uniquement le discovery ne croit plus à tort qu’un `id_token` sera présent **ou** reçoit effectivement un `id_token` valide RS256.
-- Les clients first-party existants continuent de fonctionner (régression interdite sur access token / userinfo).
-- Tests : metadata discovery (A) **ou** présence + claims minimales + nonce (B).
+- Le discovery ne mentionne plus le support ID Token.
+- `/token` ne renvoie toujours pas d’`id_token` (pas de régression « on a ajouté B par erreur »).
+- Access token + userinfo inchangés pour les clients existants.
+- Test : assertion sur le JSON discovery (absence de la clé ID Token).
+- README aligné sur le comportement réel.

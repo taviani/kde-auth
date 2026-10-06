@@ -13,7 +13,7 @@ Quand deux principes se croisent, l’ordre de **planning** n’est pas philosop
 | Priorité | Spec | Statut | Nature |
 |----------|------|--------|--------|
 | 1 | [Révoquer refresh après changement d’identifiants](spec-refresh-revoke-on-credential-change.md) | brouillon | cassé |
-| 2 | [Honnêteté discovery / id_token](spec-oidc-discovery-honesty.md) | brouillon | cassé / menteur |
+| 2 | [Honnêteté discovery (pas d’id_token annoncé)](spec-oidc-discovery-honesty.md) | brouillon — **A verrouillé** | cassé / menteur |
 | 3 | [Respect de `offline_access`](spec-offline-access.md) | brouillon | cassé / menteur |
 | 4 | [Suspendre un compte = couper les sessions](spec-suspend-revokes-sessions.md) | brouillon | cassé |
 | 5 | [Édition d’un client OAuth](spec-edit-oauth-client.md) | brouillon | feature |

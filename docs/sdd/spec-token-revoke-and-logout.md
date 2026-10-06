@@ -21,7 +21,7 @@ L’issuer reste light : pas d’introspection obligatoire, pas de denylist acce
 
 ## Processus — end session
 
-1. Le RP redirige le navigateur vers `GET /end-session` (nom exact au plan) avec `id_token_hint` ou session cookie, et optionnellement `post_logout_redirect_uri` + `state`.
+1. Le RP redirige le navigateur vers `GET /end-session` (nom exact au plan) avec la session cookie issuer (et optionnellement `client_id`), et optionnellement `post_logout_redirect_uri` + `state`. Pas d’`id_token_hint` tant qu’on n’émet pas d’`id_token` (voir [spec-oidc-discovery-honesty.md](spec-oidc-discovery-honesty.md)).
 2. L’issuer révoque la session cookie.
 3. Si `post_logout_redirect_uri` est dans une allowlist du client : redirect ; sinon page « déconnecté » issuer.
 
