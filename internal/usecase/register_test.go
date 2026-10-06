@@ -267,7 +267,8 @@ func TestRegisterUserRequiresTicket(t *testing.T) {
 	tickets := &memTickets{byHash: map[string]domain.RegistrationTicket{}}
 	users := &memUsers{}
 	accesses := &memAccesses{}
-	uc := NewRegisterUser(users, tickets, accesses, stubHasher{}, memTokens{}, stubMailer{}, port.NoopCaptcha{}, frozenClock{t: now}, stubIssuer{url: "https://auth.example"}, true)
+	clients := &memClients{byID: map[domain.ClientID]domain.OAuthClient{"web-app": publicAccessClient()}}
+	uc := NewRegisterUser(users, clients, tickets, accesses, stubHasher{}, memTokens{}, stubMailer{}, port.NoopCaptcha{}, frozenClock{t: now}, stubIssuer{url: "https://auth.example"}, true)
 
 	err := uc.Execute(context.Background(), RegisterInput{
 		Email:    "a@example.com",
@@ -278,7 +279,7 @@ func TestRegisterUserRequiresTicket(t *testing.T) {
 		t.Fatalf("empty ticket: %v", err)
 	}
 
-	issue := NewIssueRegisterTicket(&memClients{byID: map[domain.ClientID]domain.OAuthClient{"web-app": publicAccessClient()}}, tickets, stubHasher{}, stubIssuer{url: "https://auth.example"}, frozenClock{t: now}, true)
+	issue := NewIssueRegisterTicket(clients, tickets, stubHasher{}, stubIssuer{url: "https://auth.example"}, frozenClock{t: now}, true)
 	issued, err := issue.Execute(context.Background(), IssueRegisterTicketInput{ClientID: "web-app", ClientSecret: "super-secret-16"})
 	if err != nil {
 		t.Fatal(err)
@@ -299,6 +300,34 @@ func TestRegisterUserRequiresTicket(t *testing.T) {
 		Ticket:   issued.Ticket,
 	}); !errors.Is(err, domain.ErrInvalidToken) {
 		t.Fatalf("replay ticket: %v", err)
+	}
+}
+
+func TestPeekTicketRejectsClosedRegistrationAndInviteOnlyClient(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	tickets := &memTickets{byHash: map[string]domain.RegistrationTicket{}}
+	clients := &memClients{byID: map[domain.ClientID]domain.OAuthClient{"web-app": publicAccessClient()}}
+	open := NewRegisterUser(&memUsers{}, clients, tickets, &memAccesses{}, stubHasher{}, memTokens{}, stubMailer{}, port.NoopCaptcha{}, frozenClock{t: now}, stubIssuer{url: "https://auth.example"}, true)
+	closed := NewRegisterUser(&memUsers{}, clients, tickets, &memAccesses{}, stubHasher{}, memTokens{}, stubMailer{}, port.NoopCaptcha{}, frozenClock{t: now}, stubIssuer{url: "https://auth.example"}, false)
+
+	issue := NewIssueRegisterTicket(clients, tickets, stubHasher{}, stubIssuer{url: "https://auth.example"}, frozenClock{t: now}, true)
+	issued, err := issue.Execute(context.Background(), IssueRegisterTicketInput{ClientID: "web-app", ClientSecret: "super-secret-16"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := closed.PeekTicket(context.Background(), issued.Ticket); !errors.Is(err, domain.ErrRegistrationClosed) {
+		t.Fatalf("closed registration: %v", err)
+	}
+	if _, err := open.PeekTicket(context.Background(), ""); !errors.Is(err, domain.ErrInvalidToken) {
+		t.Fatalf("bare register: %v", err)
+	}
+
+	c := clients.byID["web-app"]
+	c.AccessMode = domain.AccessModeInviteOnly
+	clients.byID["web-app"] = c
+	if _, err := open.PeekTicket(context.Background(), issued.Ticket); !errors.Is(err, domain.ErrInviteOnlyRegistration) {
+		t.Fatalf("invite-only client: %v", err)
 	}
 }
 

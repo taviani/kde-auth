@@ -118,6 +118,7 @@ func (uc *IssueRegisterTicket) LinkForPublicClient(ctx context.Context, clientID
 
 type RegisterUser struct {
 	users            port.UserRepository
+	clients          port.ClientRepository
 	tickets          port.RegistrationTicketRepository
 	accesses         port.AppAccessRepository
 	hasher           port.PasswordHasher
@@ -131,6 +132,7 @@ type RegisterUser struct {
 
 func NewRegisterUser(
 	users port.UserRepository,
+	clients port.ClientRepository,
 	tickets port.RegistrationTicketRepository,
 	accesses port.AppAccessRepository,
 	hasher port.PasswordHasher,
@@ -143,6 +145,7 @@ func NewRegisterUser(
 ) *RegisterUser {
 	return &RegisterUser{
 		users:            users,
+		clients:          clients,
 		tickets:          tickets,
 		accesses:         accesses,
 		hasher:           hasher,
@@ -176,6 +179,17 @@ func (uc *RegisterUser) PeekTicket(ctx context.Context, rawTicket string) (domai
 			return domain.RegistrationTicket{}, domain.ErrInvalidToken
 		}
 		return domain.RegistrationTicket{}, err
+	}
+	client, err := uc.clients.ByClientID(ctx, ticket.ClientID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return domain.RegistrationTicket{}, domain.ErrInvalidToken
+		}
+		return domain.RegistrationTicket{}, err
+	}
+	// Re-check at use time: invite-only apps must not use /register even with a leftover ticket.
+	if client.IsInviteOnly() {
+		return domain.RegistrationTicket{}, domain.ErrInviteOnlyRegistration
 	}
 	return ticket, nil
 }

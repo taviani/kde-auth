@@ -86,7 +86,7 @@ func main() {
 
 	healthUC := usecase.NewHealth(healthChecker)
 	issueTicketUC := usecase.NewIssueRegisterTicket(clientRepo, ticketRepo, hasher, issuer, sysClock, cfg.RegistrationOpen)
-	registerUC := usecase.NewRegisterUser(userRepo, ticketRepo, appAccessRepo, hasher, tokenRepo, mailer, captcha, sysClock, issuer, cfg.RegistrationOpen)
+	registerUC := usecase.NewRegisterUser(userRepo, clientRepo, ticketRepo, appAccessRepo, hasher, tokenRepo, mailer, captcha, sysClock, issuer, cfg.RegistrationOpen)
 	verifyUC := usecase.NewVerifyEmail(userRepo, tokenRepo, sysClock)
 	loginUC := usecase.NewLogin(userRepo, sessionRepo, hasher, captcha, sysClock, sessionTTL)
 	loginLimiter := ratelimit.New(5, 15*time.Minute)
