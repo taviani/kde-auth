@@ -158,7 +158,7 @@ func authorize(t *testing.T, client *http.Client, base, redirectURI string) *htt
 		"response_type":         {"code"},
 		"client_id":             {"app"},
 		"redirect_uri":          {redirectURI},
-		"scope":                 {"openid"},
+		"scope":                 {"openid email offline_access"},
 		"state":                 {"state-1"},
 		"code_challenge":        {testChallenge},
 		"code_challenge_method": {"S256"},

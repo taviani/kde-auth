@@ -41,13 +41,16 @@ func (h *Token) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, err)
 		return
 	}
-	response.WriteJSON(w, http.StatusOK, map[string]any{
-		"access_token":  result.AccessToken,
-		"token_type":    result.TokenType,
-		"expires_in":    result.ExpiresIn,
-		"refresh_token": result.RefreshToken,
-		"scope":         result.Scope,
-	})
+	body := map[string]any{
+		"access_token": result.AccessToken,
+		"token_type":   result.TokenType,
+		"expires_in":   result.ExpiresIn,
+		"scope":        result.Scope,
+	}
+	if result.RefreshToken != "" {
+		body["refresh_token"] = result.RefreshToken
+	}
+	response.WriteJSON(w, http.StatusOK, body)
 }
 
 type UserInfo struct {

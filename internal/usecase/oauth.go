@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/url"
 	"time"
 
@@ -269,7 +268,7 @@ func (uc *ExchangeToken) refresh(ctx context.Context, in TokenInput) (TokenResul
 		return TokenResult{}, domain.ErrInvalidGrant
 	}
 
-	return uc.issueTokens(ctx, user, client.ClientID, fmt.Sprintf("%s %s", domain.ScopeOpenID, domain.ScopeEmail))
+	return uc.issueTokens(ctx, user, client.ClientID, refresh.Scope)
 }
 
 func (uc *ExchangeToken) authenticateClient(ctx context.Context, clientID, secret string) (domain.OAuthClient, error) {
@@ -305,6 +304,17 @@ func (uc *ExchangeToken) issueTokens(ctx context.Context, user domain.User, clie
 		return TokenResult{}, err
 	}
 
+	result := TokenResult{
+		AccessToken: accessToken,
+		TokenType:   "Bearer",
+		ExpiresIn:   int(accessTokenTTL.Seconds()),
+		Scope:       scope,
+	}
+
+	if !domain.ScopeIncludes(scope, domain.ScopeOfflineAccess) {
+		return result, nil
+	}
+
 	rawRefresh, err := crypto.RandomToken(32)
 	if err != nil {
 		return TokenResult{}, err
@@ -312,19 +322,14 @@ func (uc *ExchangeToken) issueTokens(ctx context.Context, user domain.User, clie
 	refresh := domain.RefreshToken{
 		UserID:    user.ID,
 		ClientID:  clientID,
+		Scope:     scope,
 		ExpiresAt: now.Add(refreshTokenTTL),
 	}
 	if err := uc.tokens.CreateRefreshToken(ctx, refresh, crypto.HashToken(rawRefresh)); err != nil {
 		return TokenResult{}, err
 	}
-
-	return TokenResult{
-		AccessToken:  accessToken,
-		TokenType:    "Bearer",
-		ExpiresIn:    int(accessTokenTTL.Seconds()),
-		RefreshToken: rawRefresh,
-		Scope:        scope,
-	}, nil
+	result.RefreshToken = rawRefresh
+	return result, nil
 }
 
 type UserInfo struct {
