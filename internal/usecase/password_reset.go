@@ -114,16 +114,16 @@ func (uc *ResetPassword) Execute(ctx context.Context, in ResetPasswordInput) err
 	if err != nil {
 		return err
 	}
+	hash, err := uc.hasher.Hash(ctx, password)
+	if err != nil {
+		return err
+	}
 	now := uc.clock.Now()
 	token, err := uc.tokens.ConsumePasswordResetToken(ctx, crypto.HashToken(in.Token), now)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			return domain.ErrInvalidToken
 		}
-		return err
-	}
-	hash, err := uc.hasher.Hash(ctx, password)
-	if err != nil {
 		return err
 	}
 	if err := uc.users.UpdatePassword(ctx, token.UserID, hash, now); err != nil {

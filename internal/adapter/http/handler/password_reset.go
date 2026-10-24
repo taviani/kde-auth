@@ -99,6 +99,9 @@ func (h *ResetPassword) post(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token := r.FormValue("token")
+	if token == "" {
+		token = r.URL.Query().Get("token")
+	}
 	data := render.PageData{
 		Title: "Reset password",
 		Token: token,
