@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -61,23 +60,32 @@ func TestPublicClientWrongVerifierIsRejected(t *testing.T) {
 	}
 }
 
-func TestCustomSchemeAuthorizeDoesNotRedirect(t *testing.T) {
+func TestCustomSchemeAuthorizeRedirectsToTheApp(t *testing.T) {
 	client, base := newPublicClientServer(t)
 	res := authorize(t, client, base, testScheme)
 	defer res.Body.Close()
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("status %d, want 200", res.StatusCode)
+	if res.StatusCode != http.StatusFound {
+		t.Fatalf("status %d, want 302", res.StatusCode)
 	}
-	raw, err := io.ReadAll(res.Body)
+	loc, err := res.Location()
 	if err != nil {
 		t.Fatal(err)
 	}
-	page := string(raw)
-	if !strings.Contains(page, "Open the app to continue") {
-		t.Fatalf("expected the app-open page, got %s", page)
+	if loc.Scheme != "app.example" || loc.Host != "redirect" || loc.Query().Get("code") == "" || loc.Query().Get("state") == "" {
+		t.Fatalf("location %s", loc)
 	}
-	if !strings.Contains(page, "code=") {
-		t.Fatal("expected the code in the app link")
+}
+
+func TestAndroidCustomSchemeRedirectsWithIntent(t *testing.T) {
+	client, base := newPublicClientServer(t)
+	res := authorizeWithUA(t, client, base, testScheme, "Mozilla/5.0 (Linux; Android 14) Chrome/120.0.0.0 Mobile")
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusFound {
+		t.Fatalf("status %d, want 302", res.StatusCode)
+	}
+	loc := res.Header.Get("Location")
+	if !strings.HasPrefix(loc, "intent://") || !strings.Contains(loc, "package=app.example") || !strings.Contains(loc, "scheme=app.example") {
+		t.Fatalf("location %s", loc)
 	}
 }
 
@@ -99,6 +107,7 @@ func newPublicClientServer(t *testing.T) (*http.Client, string) {
 			RedirectURIs:            []string{testHTTPS, testScheme},
 			AccessMode:              domain.AccessModePublic,
 			TokenEndpointAuthMethod: domain.TokenAuthNone,
+			AndroidPackage:          "app.example",
 		},
 	}}
 	sessions := &memSessions{byHash: map[string]domain.Session{
@@ -154,6 +163,11 @@ func authorizeCode(t *testing.T, client *http.Client, base, redirectURI string) 
 
 func authorize(t *testing.T, client *http.Client, base, redirectURI string) *http.Response {
 	t.Helper()
+	return authorizeWithUA(t, client, base, redirectURI, "")
+}
+
+func authorizeWithUA(t *testing.T, client *http.Client, base, redirectURI, userAgent string) *http.Response {
+	t.Helper()
 	q := url.Values{
 		"response_type":         {"code"},
 		"client_id":             {"app"},
@@ -166,6 +180,9 @@ func authorize(t *testing.T, client *http.Client, base, redirectURI string) *htt
 	req, err := http.NewRequest(http.MethodGet, base+"/authorize?"+q.Encode(), nil)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if userAgent != "" {
+		req.Header.Set("User-Agent", userAgent)
 	}
 	req.AddCookie(&http.Cookie{Name: response.SessionCookieName, Value: "raw-session"})
 	res, err := client.Do(req)
