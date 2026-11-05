@@ -458,6 +458,31 @@ func TestResetPasswordRevokesSessionsAndRefresh(t *testing.T) {
 	}
 }
 
+func TestResetPasswordRejectsShortPasswordWithoutConsumingToken(t *testing.T) {
+	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
+	users := &passwordUsers{byID: map[domain.UserID]domain.User{
+		"user": {ID: "user", PasswordHash: "h:oldpassword12", Status: domain.UserStatusActive},
+	}}
+	raw := "reset-raw-token"
+	hash := crypto.HashToken(raw)
+	tokens := &trackingRefreshTokens{resetByHash: map[string]domain.PasswordResetToken{
+		hash: {UserID: "user", ExpiresAt: now.Add(time.Hour)},
+	}}
+	uc := NewResetPassword(users, tokens, &trackingSessions{}, stubHasher{}, frozenClock{t: now})
+
+	err := uc.Execute(context.Background(), ResetPasswordInput{
+		Token:           raw,
+		Password:        "short",
+		PasswordConfirm: "short",
+	})
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+	if _, ok := tokens.resetByHash[hash]; !ok {
+		t.Fatal("reset token must still be usable after validation failure")
+	}
+}
+
 func TestAdminDeleteRejectsSelfAndAdmins(t *testing.T) {
 	now := time.Date(2026, 8, 20, 12, 0, 0, 0, time.UTC)
 	repo := &memAdminUsers{byID: map[domain.UserID]domain.User{
