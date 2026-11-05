@@ -16,9 +16,20 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Go version from the image
+        id: go
+        run: |
+          version=$(sed -n 's/^FROM golang:\([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' Dockerfile)
+          if [ -z "$version" ]; then
+            echo "::error::Dockerfile does not name a Go version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-go@v7
         with:
-          go-version: '1.26.8'
+          go-version: ${{ steps.go.outputs.version }}
+          check-latest: true
           cache: true
 
       - name: Vet
@@ -110,4 +121,4 @@ jobs:
             --exclude bin \
             --exclude secrets \
             ./ "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}"
-          ssh "${DEPLOY_USER}@${DEPLOY_HOST}" "cd ${DEPLOY_PATH} && docker-compose up -d --build"
+          ssh "${DEPLOY_USER}@${DEPLOY_HOST}" "cd ${DEPLOY_PATH} && docker-compose build --pull && docker-compose up -d"

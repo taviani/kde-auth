@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"html/template"
 	"net/http"
 	"net/url"
 
@@ -57,16 +56,9 @@ func (h *Authorize) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		response.WriteError(w, err)
 		return
 	}
-	if usesCustomRedirectScheme(result.RedirectURL) && h.render != nil {
-		openURL := appOpenRedirectURL(r.UserAgent(), result.RedirectURL, result.AndroidPackage)
-		h.render.HTMLData(w, "authorize_app_open.html", struct {
-			Title       string
-			RedirectURL template.URL
-		}{
-			Title:       "Open app",
-			RedirectURL: template.URL(openURL),
-		})
-		return
+	target := result.RedirectURL
+	if usesCustomRedirectScheme(target) {
+		target = appOpenRedirectURL(r.UserAgent(), target, result.AndroidPackage)
 	}
-	http.Redirect(w, r, result.RedirectURL, http.StatusFound)
+	http.Redirect(w, r, target, http.StatusFound)
 }
