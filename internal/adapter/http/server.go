@@ -81,6 +81,7 @@ func NewRouter(cfg config.Config, h Handlers) http.Handler {
 			ar.Get("/clients", h.Admin.Clients)
 			ar.Post("/clients", h.Admin.CreateClient)
 			ar.Post("/clients/access-mode", h.Admin.SetAccessMode)
+			ar.Post("/clients/redirect-uris", h.Admin.UpdateRedirectURIs)
 			ar.Get("/invites", h.Admin.Invites)
 			ar.Post("/invites", h.Admin.CreateInvite)
 			ar.Post("/invites/revoke", h.Admin.RevokeInvite)

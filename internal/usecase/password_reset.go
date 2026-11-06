@@ -152,6 +152,7 @@ type CreateClientInput struct {
 	ClientID                string
 	Name                    string
 	RedirectURI             string
+	AndroidPackage          string
 	AccessMode              string
 	TokenEndpointAuthMethod string
 }
@@ -168,6 +169,14 @@ func (uc *AdminClients) Create(ctx context.Context, actor domain.User, in Create
 	clientID := domain.ClientID(in.ClientID)
 	if clientID == "" || in.Name == "" || in.RedirectURI == "" {
 		return CreateClientResult{}, domain.ValidationError{Field: "client", Message: "client_id, name and redirect_uri are required"}
+	}
+	redirectURIs, err := domain.ParseRedirectURIList(in.RedirectURI)
+	if err != nil {
+		return CreateClientResult{}, err
+	}
+	androidPackage, err := domain.ParseAndroidPackage(in.AndroidPackage)
+	if err != nil {
+		return CreateClientResult{}, err
 	}
 	mode, err := domain.ParseAccessMode(in.AccessMode)
 	if err != nil {
@@ -186,9 +195,10 @@ func (uc *AdminClients) Create(ctx context.Context, actor domain.User, in Create
 	client := domain.OAuthClient{
 		ClientID:                clientID,
 		Name:                    in.Name,
-		RedirectURIs:            []string{in.RedirectURI},
+		RedirectURIs:            redirectURIs,
 		AccessMode:              mode,
 		TokenEndpointAuthMethod: authMethod,
+		AndroidPackage:          androidPackage,
 	}
 
 	var rawSecret string
