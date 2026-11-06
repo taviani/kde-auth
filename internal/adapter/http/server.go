@@ -36,6 +36,8 @@ func NewRouter(cfg config.Config, h Handlers) http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
+	r.Get("/favicon.ico", favicon)
+	r.Get("/favicon.png", favicon)
 	r.Get("/health", h.Health.ServeHTTP)
 
 	r.Get("/.well-known/openid-configuration", h.OIDC.Discovery)
