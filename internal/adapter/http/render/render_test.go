@@ -39,6 +39,9 @@ func TestLoginTemplateHasNoRegisterLink(t *testing.T) {
 	if !strings.Contains(body, "/forgot-password") {
 		t.Fatal("login should still link to forgot-password")
 	}
+	if !strings.Contains(body, `rel="icon" href="/favicon.png"`) {
+		t.Fatal("login should link the favicon")
+	}
 }
 
 func TestLoginTemplateSignupLink(t *testing.T) {
