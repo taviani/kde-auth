@@ -267,6 +267,9 @@ func (m *memClients) Upsert(context.Context, domain.OAuthClient) error   { retur
 func (m *memClients) UpdateAccessMode(context.Context, domain.ClientID, domain.AccessMode) error {
 	return nil
 }
+func (m *memClients) UpdateRedirectURIs(context.Context, domain.ClientID, []string, string) error {
+	return nil
+}
 
 type memSessions struct {
 	byHash map[string]domain.Session

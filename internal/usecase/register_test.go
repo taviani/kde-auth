@@ -53,6 +53,16 @@ func (m *memClients) Upsert(context.Context, domain.OAuthClient) error   { retur
 func (m *memClients) UpdateAccessMode(context.Context, domain.ClientID, domain.AccessMode) error {
 	return nil
 }
+func (m *memClients) UpdateRedirectURIs(_ context.Context, clientID domain.ClientID, uris []string, androidPackage string) error {
+	c, ok := m.byID[clientID]
+	if !ok {
+		return domain.ErrNotFound
+	}
+	c.RedirectURIs = append([]string(nil), uris...)
+	c.AndroidPackage = androidPackage
+	m.byID[clientID] = c
+	return nil
+}
 
 type memTickets struct {
 	byHash map[string]domain.RegistrationTicket

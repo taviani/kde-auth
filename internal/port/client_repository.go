@@ -11,4 +11,5 @@ type ClientRepository interface {
 	List(ctx context.Context) ([]domain.OAuthClient, error)
 	Upsert(ctx context.Context, client domain.OAuthClient) error
 	UpdateAccessMode(ctx context.Context, clientID domain.ClientID, mode domain.AccessMode) error
+	UpdateRedirectURIs(ctx context.Context, clientID domain.ClientID, uris []string, androidPackage string) error
 }

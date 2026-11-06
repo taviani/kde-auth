@@ -89,6 +89,19 @@ func (r *ClientRepo) UpdateAccessMode(ctx context.Context, clientID domain.Clien
 	return nil
 }
 
+func (r *ClientRepo) UpdateRedirectURIs(ctx context.Context, clientID domain.ClientID, uris []string, androidPackage string) error {
+	tag, err := r.pool.Exec(ctx, `
+		UPDATE oauth_clients SET redirect_uris = $2, android_package = $3 WHERE client_id = $1
+	`, clientID, uris, androidPackage)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
 type clientScanner interface {
 	Scan(dest ...any) error
 }

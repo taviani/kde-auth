@@ -23,24 +23,27 @@ func NewAdmin(users *usecase.AdminUsers, clients *usecase.AdminClients, invites 
 }
 
 type adminPageData struct {
-	Title       string
-	Error       string
-	Success     string
-	Actor       domain.User
-	Stats       domain.UserStats
-	Result      usecase.AdminUsersResult
-	Clients     []domain.OAuthClient
-	Invites     []domain.Invite
-	NewSecret   string
-	NewClientID string
-	AcceptURL   string
-	Query       string
-	Status      string
-	Role        string
-	Client      string
-	Page        int
-	PrevPage    int
-	NextPage    int
+	Title              string
+	Error              string
+	Success            string
+	Actor              domain.User
+	Stats              domain.UserStats
+	Result             usecase.AdminUsersResult
+	Clients            []domain.OAuthClient
+	Invites            []domain.Invite
+	NewSecret          string
+	NewClientID        string
+	EditClientID       string
+	EditRedirectURIs   string
+	EditAndroidPackage string
+	AcceptURL          string
+	Query              string
+	Status             string
+	Role               string
+	Client             string
+	Page               int
+	PrevPage           int
+	NextPage           int
 }
 
 func (h *Admin) Dashboard(w http.ResponseWriter, r *http.Request) {
@@ -194,6 +197,7 @@ func (h *Admin) CreateClient(w http.ResponseWriter, r *http.Request) {
 		ClientID:                strings.TrimSpace(r.FormValue("client_id")),
 		Name:                    strings.TrimSpace(r.FormValue("name")),
 		RedirectURI:             strings.TrimSpace(r.FormValue("redirect_uri")),
+		AndroidPackage:          r.FormValue("android_package"),
 		AccessMode:              strings.TrimSpace(r.FormValue("access_mode")),
 		TokenEndpointAuthMethod: strings.TrimSpace(r.FormValue("token_endpoint_auth_method")),
 	})
@@ -236,6 +240,35 @@ func (h *Admin) SetAccessMode(w http.ResponseWriter, r *http.Request) {
 			Actor:   actor,
 			Clients: clients,
 			Error:   response.UserFacingMessage(err),
+		})
+		return
+	}
+	http.Redirect(w, r, "/admin/clients", http.StatusSeeOther)
+}
+
+func (h *Admin) UpdateRedirectURIs(w http.ResponseWriter, r *http.Request) {
+	actor, ok := AdminUser(r.Context())
+	if !ok {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	clientID := strings.TrimSpace(r.FormValue("client_id"))
+	raw := r.FormValue("redirect_uris")
+	androidPackage := r.FormValue("android_package")
+	if err := h.clients.UpdateRedirectURIs(r.Context(), actor, clientID, raw, androidPackage); err != nil {
+		clients, _ := h.clients.List(r.Context())
+		h.render.HTMLData(w, "admin_clients.html", adminPageData{
+			Title:              "OAuth clients",
+			Actor:              actor,
+			Clients:            clients,
+			Error:              response.UserFacingMessage(err),
+			EditClientID:       clientID,
+			EditRedirectURIs:   raw,
+			EditAndroidPackage: androidPackage,
 		})
 		return
 	}
