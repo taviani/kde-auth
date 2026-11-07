@@ -49,6 +49,7 @@ func NewRouter(cfg config.Config, h Handlers) http.Handler {
 	r.Get("/login", h.Login.ServeHTTP)
 	r.Post("/login", h.Login.ServeHTTP)
 	r.Get("/verify-email", h.VerifyEmail.ServeHTTP)
+	r.Get("/logout", h.Logout.ServeHTTP)
 	r.Post("/logout", h.Logout.ServeHTTP)
 	r.Get("/forgot-password", h.ForgotPassword.ServeHTTP)
 	r.Post("/forgot-password", h.ForgotPassword.ServeHTTP)
