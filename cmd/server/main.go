@@ -121,7 +121,7 @@ func main() {
 		Register:       handler.NewRegister(registerUC, issueTicketUC, renderer, cfg.TurnstileSiteKey),
 		Login:          handler.NewLogin(loginUC, issueTicketUC, loginLimiter, renderer, cfg.TurnstileSiteKey, cfg.CookieSecure),
 		VerifyEmail:    handler.NewVerifyEmail(verifyUC, renderer),
-		Logout:         handler.NewLogout(logoutUC, cfg.CookieSecure),
+		Logout:         handler.NewLogout(logoutUC, clientRepo, cfg.CookieSecure),
 		ForgotPassword: handler.NewForgotPassword(forgotUC, renderer, cfg.TurnstileSiteKey),
 		ResetPassword:  handler.NewResetPassword(resetUC, renderer),
 		ChangePassword: handler.NewChangePassword(changePasswordUC, issuer),

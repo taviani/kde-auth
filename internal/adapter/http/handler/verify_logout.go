@@ -5,6 +5,8 @@ import (
 
 	"github.com/taviani/kde-auth/internal/adapter/http/render"
 	"github.com/taviani/kde-auth/internal/adapter/http/response"
+	"github.com/taviani/kde-auth/internal/domain"
+	"github.com/taviani/kde-auth/internal/port"
 	"github.com/taviani/kde-auth/internal/usecase"
 )
 
@@ -34,15 +36,41 @@ func (h *VerifyEmail) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type Logout struct {
 	uc           *usecase.Logout
+	clients      port.ClientRepository
 	cookieSecure bool
 }
 
-func NewLogout(uc *usecase.Logout, cookieSecure bool) *Logout {
-	return &Logout{uc: uc, cookieSecure: cookieSecure}
+func NewLogout(uc *usecase.Logout, clients port.ClientRepository, cookieSecure bool) *Logout {
+	return &Logout{uc: uc, clients: clients, cookieSecure: cookieSecure}
 }
 
 func (h *Logout) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	redirect, pkg := h.allowedReturn(r)
 	_ = h.uc.Execute(r.Context(), response.SessionToken(r))
 	response.ClearSessionCookie(w, h.cookieSecure)
-	w.WriteHeader(http.StatusNoContent)
+	if redirect == "" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	target := redirect
+	if usesCustomRedirectScheme(target) {
+		target = appOpenRedirectURL(r.UserAgent(), target, pkg)
+	}
+	http.Redirect(w, r, target, http.StatusFound)
+}
+
+func (h *Logout) allowedReturn(r *http.Request) (string, string) {
+	if r.Method != http.MethodGet || h.clients == nil {
+		return "", ""
+	}
+	clientID := r.URL.Query().Get("client_id")
+	redirectURI := r.URL.Query().Get("redirect_uri")
+	if clientID == "" || redirectURI == "" {
+		return "", ""
+	}
+	client, err := h.clients.ByClientID(r.Context(), domain.ClientID(clientID))
+	if err != nil || !client.AllowsRedirectURI(redirectURI) {
+		return "", ""
+	}
+	return redirectURI, client.AndroidPackage
 }
